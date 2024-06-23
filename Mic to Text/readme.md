@@ -10,7 +10,7 @@ uses pyaudio
 
 Records small snippets of audio and places them onto queue for processing
 
-Since there's a chance that words will get chopped mid snipet, this creates two streams of audio clips that ard offset by half length:
+Since there's a chance that words will get chopped mid snippet, this creates two streams of audio clips that are offset by half length:
 
 If the half length is 3 seconds, then one of the queues gets clips starting at time = 0, 6, 12, 18 ...
 The other queue gets clips starting at time = 3, 9, 15, 21 ...
@@ -36,7 +36,7 @@ There is an attempt to ignore silence, but sometimes words get halucinated
 ```
 utc start,
 utc end,
-probability,
+probability %,
 word text
 ```
 
