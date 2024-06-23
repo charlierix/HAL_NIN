@@ -1,6 +1,7 @@
 # https://www.youtube.com/watch?v=k6nIxWGdrS
 
 import datetime
+import numpy as np
 import pyaudio
 
 FORMAT = pyaudio.paInt16
@@ -17,8 +18,8 @@ def mic_to_soundclips(queue_even, queue_odd, queue_cancel):
     audio = pyaudio.PyAudio()
     stream = audio.open(format=FORMAT, channels=1, rate=RATE, input=True, frames_per_buffer=1024)
 
-    chunk = None
-    prev_chunk = None
+    chunk = b''
+    prev_chunk = b''
     counter = 0
 
     while True:
@@ -42,9 +43,10 @@ def mic_to_soundclips(queue_even, queue_odd, queue_cancel):
 
 # Records CHUNK_LENGTH seconds of audio into a list
 def record_chunk(stream):
-    frames = []
+    all_data = b''
+
     for _ in range(0, int(RATE / 1024 * CHUNK_LENGTH)):
         data = stream.read(1024)
-        frames.append(data)
+        all_data += data
 
-    return frames
+    return np.frombuffer(all_data, np.int16).astype(np.float32) / 32768.0      # I'm guessing it's 32768 because format is pyaudio.paInt16.  I saw another example that was using 8 bit and they divided by 255
