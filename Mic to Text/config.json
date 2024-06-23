@@ -1,5 +1,16 @@
 {
-    "whisper":
+    "audio":
+    {
+        // 44100 is a choice for higher quality.  I didn't notice enough difference to justify it when it's just mic and talking
+        "rate": 16000,
+
+        // Half sound clip length in seconds
+        // A sound clip sent to the whisper translator is double this length.  There are two translators in their
+        // own process getting clips staggered by this length (0-3, 3-6, 6-9... and another getting 1.5-4.5, 4.5-7.5, 7.5-10.5...)
+        "half_length": 1.5
+    },
+
+    "translate":
     {
         // large-v3          1550 M params       https://huggingface.co/openai/whisper-large-v3
         // distil-large-v3   756 M params        https://huggingface.co/distil-whisper/distil-large-v3
@@ -7,9 +18,11 @@
         // small.en          244 M params        https://huggingface.co/openai/whisper-small.en
         "model_size": "distil-large-v3",
 
-
+        // 'cpu' or 'cuda'      gpu requires     https://developer.nvidia.com/cublas     https://developer.nvidia.com/cudnn
         "device": "cpu",
+
+        // if cpu, use 'int8'
+        // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
         "compute_type": "int8"
     }
-
 }

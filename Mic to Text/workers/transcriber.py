@@ -1,16 +1,13 @@
+# https://github.com/SYSTRAN/faster-whisper
+
 import datetime
 import time
 from faster_whisper import WhisperModel
 
 def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
-    config_whisper = config["whisper"]
-    
-    # Run on GPU with FP16
-    # model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="float16")
-    # or run on GPU with INT8
-    # model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="int8_float16")
-    # or run on CPU with INT8
-    model = WhisperModel(config_whisper["model_size"], device="cpu", compute_type="int8")
+    config_translate = config["translate"]
+
+    model = WhisperModel(config_translate["model_size"], device=config_translate["device"], compute_type=config_translate["compute_type"])
 
     while True:
         # See if the process should stop
