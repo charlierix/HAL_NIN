@@ -2,19 +2,15 @@ import datetime
 import time
 from faster_whisper import WhisperModel
 
-def soundclips_to_text(queue_sound, queue_text, queue_cancel):
-    # large-v3          1550 M params       https://huggingface.co/openai/whisper-large-v3
-    # distil-large-v3   756 M params        https://huggingface.co/distil-whisper/distil-large-v3
-    # medium.en         769 M params        https://huggingface.co/openai/whisper-medium.en
-    # small.en          244 M params        https://huggingface.co/openai/whisper-small.en
-    MODEL_SIZE = "distil-large-v3"
-
+def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
+    config_whisper = config["whisper"]
+    
     # Run on GPU with FP16
     # model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="float16")
     # or run on GPU with INT8
     # model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="int8_float16")
     # or run on CPU with INT8
-    model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
+    model = WhisperModel(config_whisper["model_size"], device="cpu", compute_type="int8")
 
     while True:
         # See if the process should stop

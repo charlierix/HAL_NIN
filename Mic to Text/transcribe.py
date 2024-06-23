@@ -1,3 +1,4 @@
+import json
 import keyboard
 import multiprocessing
 
@@ -7,16 +8,25 @@ from workers.transcriber import soundclips_to_text
 if __name__ == "__main__":
     print("Press backspace to quit...")
 
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+
     # These queues are how the processes send messages between themselves
     queue_even = multiprocessing.Queue()        # receives clips starting at time=0 (0-6, 6-12, 12-18 ...)
     queue_odd = multiprocessing.Queue()         # receives starting at time=3 (3-9, 9-15, 15-21 ...)
-    queue_text = multiprocessing.Queue()
+    queue_text1 = multiprocessing.Queue()       # receives from both transcriber processes
+    queue_text2 = multiprocessing.Queue()       # receives from the the process that decides the final words
     queue_cancel = multiprocessing.Queue()
 
     # Kick off processes
-    mic_listener = multiprocessing.Process(target=mic_to_soundclips, args=(queue_even, queue_odd, queue_cancel))
-    transcriber_even = multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text, queue_cancel))
-    transcriber_odd = multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text, queue_cancel))
+    mic_listener = multiprocessing.Process(target=mic_to_soundclips, args=(queue_even, queue_odd, queue_cancel, config))
+    transcriber_even = multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text1, queue_cancel, config))
+    transcriber_odd = multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text1, queue_cancel, config))
+
+
+    # TODO: Text merge/filter process
+
+
 
     mic_listener.start()
     transcriber_even.start()

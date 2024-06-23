@@ -13,7 +13,7 @@ CHUNK_LENGTH = 3        # seconds
 # A sample placed on a queue is CHUNK_LENGTH * 2
 # queue_even gets items starting at time=0, time=0+CHUNK_LENGTH*2 ...
 # queue_odd gets items starting at time=CHUNK_LENGTH, time=CHUNK_LENGTH+CHUNK_LENGTH*2 ...
-def mic_to_soundclips(queue_even, queue_odd, queue_cancel):
+def mic_to_soundclips(queue_even, queue_odd, queue_cancel, config):
     # how does it know that input is mic and not line in?  maybe a default?
     audio = pyaudio.PyAudio()
     stream = audio.open(format=FORMAT, channels=1, rate=RATE, input=True, frames_per_buffer=1024)
