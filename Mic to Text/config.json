@@ -24,5 +24,13 @@
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
         "compute_type": "int8"
+    },
+
+    "text_filter":
+    {
+        // Need to wait for both streams to process before trying to send the words.  These define the window of time
+        // that words get sent (seconds in the past)
+        "send_delay_min": 4,
+        "send_delay_max": 6
     }
 }
