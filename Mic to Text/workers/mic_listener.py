@@ -1,6 +1,6 @@
 # https://www.youtube.com/watch?v=k6nIxWGdrS4
 
-import datetime
+from datetime import datetime, timezone
 import numpy as np
 import pyaudio
 
@@ -18,8 +18,8 @@ def mic_to_soundclips(queue_even, queue_odd, queue_cancel, config):
     audio = pyaudio.PyAudio()
     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=rate, input=True, frames_per_buffer=1024)
 
-    chunk = b''
-    prev_chunk = b''
+    chunk = None
+    prev_chunk = None
     counter = 0
 
     while True:
@@ -33,7 +33,7 @@ def mic_to_soundclips(queue_even, queue_odd, queue_cancel, config):
 
         # Place on one of the two queues
         queue = queue_even if counter % 2 == 0 else queue_odd
-        queue.put((datetime.utcnow(), prev_chunk + chunk))
+        queue.put((datetime.now(timezone.utc), concat_chunks(prev_chunk, chunk)))
 
         counter += 1
     
@@ -50,3 +50,12 @@ def record_chunk(stream, rate, half_length):
         all_data += data
 
     return np.frombuffer(all_data, np.int16).astype(np.float32) / 32768.0      # I'm guessing it's 32768 because format is pyaudio.paInt16.  I saw another example that was using 8 bit and they divided by 255
+
+def concat_chunks(chunk1, chunk2):
+    if chunk1 is None:
+        return chunk2
+    
+    elif chunk2 is None:
+        return chunk1
+    
+    return chunk1 + chunk2

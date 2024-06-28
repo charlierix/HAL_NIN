@@ -17,7 +17,7 @@ The other queue gets clips starting at time = 3, 9, 15, 21 ...
 
 **Tuple placed on queue**
 ```
-datetime.utcnow(),
+datetime.now(timezone.utc),
 sound clip in the format that whisper wants (numpy array)
 ```
 

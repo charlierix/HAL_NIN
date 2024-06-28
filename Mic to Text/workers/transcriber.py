@@ -21,7 +21,7 @@ def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
             clip = queue_sound.get()
             words = transcribe_chunk(model, clip[0], clip[1])
 
-            if words.count > 0:
+            if len(words) > 0:
                 queue_text.put(words)
 
 

@@ -1,4 +1,4 @@
-import json
+import json5        # json5 supports json with comments
 import keyboard
 import multiprocessing
 
@@ -10,7 +10,7 @@ if __name__ == "__main__":
     print("Press backspace to quit...")
 
     with open('config.json', 'r') as f:
-        config = json.load(f)
+        config = json5.load(f)
 
     # These queues are how the processes send messages between themselves
     queue_even = multiprocessing.Queue()        # receives clips starting at time=0 (0-6, 6-12, 12-18 ...)
