@@ -1,6 +1,6 @@
 # https://github.com/SYSTRAN/faster-whisper
 
-import datetime
+from datetime import datetime, timezone, timedelta
 import time
 from faster_whisper import WhisperModel
 
@@ -35,7 +35,11 @@ def transcribe_chunk(model, clip_time, clip):
     #
     # this defaults to true, but trying with false to hopefully get cleaner translations
 
+    start = datetime.now(timezone.utc)
+
     segments, _ = model.transcribe(clip, language="en", word_timestamps=True, condition_on_previous_text=False)
+
+    elapsed = (datetime.now(timezone.utc) - start).total_seconds()
 
     retVal = []
 
@@ -55,8 +59,10 @@ def transcribe_chunk(model, clip_time, clip):
             # Leaving that decision for the function that has results from both streams
 
             retVal.append((
-                clip_time + datetime.timedelta(seconds=word.start),
-                clip_time + datetime.timedelta(seconds=word.end),
+                clip_time,
+                elapsed,
+                clip_time + timedelta(seconds=word.start),
+                clip_time + timedelta(seconds=word.end),
                 word.probability,
                 word.word))
             

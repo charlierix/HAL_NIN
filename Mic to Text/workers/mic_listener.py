@@ -18,6 +18,11 @@ def mic_to_soundclips(queue_even, queue_odd, queue_cancel, config):
     audio = pyaudio.PyAudio()
     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=rate, input=True, frames_per_buffer=1024)
 
+
+    # TODO: it's not correct to wait until placing on the queue to record the time
+    # chunk and prev_chunk need to be tuples that contain sound data and when recording started
+
+
     chunk = None
     prev_chunk = None
     counter = 0
