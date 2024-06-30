@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 import time
-
+from .models import TranscribedWord
 
 
 # TODO: figure out where the delay is
@@ -17,7 +17,7 @@ import time
 def filter_text_streams(queue_text1, queue_text2, queue_cancel, config):
     config_filter = config['text_filter']
 
-    buffer = []     # list of (record_start, transcribe_elapsed, word_start, word_stop, probability, word)
+    buffer = []     # list of models.TranscribedWord (record_start, transcribe_elapsed, word_start, word_stop, probability, word)
 
     log = open('log.json', 'w')
     log.write('{"actions": [')
@@ -60,15 +60,20 @@ def get_words_in_window(buffer, sendwindow_start, sendwindow_stop, now, log):
     index = len(buffer) - 1     # it looks like len() needs to iterate to get the number, also pop needs to shift things left (I could be mistaken).  So work right to left
 
     while index >= 0:
-        print('examining word: ' + str(buffer[index]))
+        #print('examining word: ' + buffer[index].word)
 
-        if buffer[index][3] < sendwindow_start:     # word_stop < sendwindow_start
+        if buffer[index].word_stop < sendwindow_start:
             # Too old, just remove and ignore it
+            seconds = (sendwindow_start - buffer[index].word_stop).total_seconds()
+            #print("too old (%.2fs).  word stop: %s | window start: %s" % (seconds, str(buffer[index].word_stop), str(sendwindow_start)))
+            print('too old (%.2fs) | %s' % (seconds, buffer[index].word))
+
             log_removal(log, buffer[index], sendwindow_start, sendwindow_stop, now)
             buffer.pop(index)
 
-        elif buffer[index][2] <= sendwindow_stop:       # word_start <= sendwindow_stop
+        elif buffer[index].word_start <= sendwindow_stop:
             # In the window, move to return list
+            print('word in window: ' + buffer[index].word)
             retVal.append(buffer.pop(index))
             
         index -= 1
@@ -107,9 +112,11 @@ def log_window(log, words_in_window, now):
     log.write(']},')
 
 def add_word_to_log(log, word):
-    log.write('"record_start": "' + str(word[0]) + '",')
-    log.write('"transcribe_elapsed": ' + str(word[1]) + ',')
-    log.write('"start": "' + str(word[2]) + '",')
-    log.write('"stop": "' + str(word[3]) + '",')
-    log.write('"probability": ' + str(word[4]) + ',')
-    log.write('"word": "' + word[5] + '"')
+    log.write('"clip_time_start": "' + str(word.clip_time_start) + '",')
+    log.write('"clip_time_stop": "' + str(word.clip_time_stop) + '",')
+    log.write('"transcribe_start": "' + str(word.transcribe_start) + '",')
+    log.write('"transcribe_stop": "' + str(word.transcribe_stop) + '",')
+    log.write('"word_start": "' + str(word.word_start) + '",')
+    log.write('"word_stop": "' + str(word.word_stop) + '",')
+    log.write('"word_probability": ' + str(word.word_probability) + ',')
+    log.write('"word": "' + word.word + '"')

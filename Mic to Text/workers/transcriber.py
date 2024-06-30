@@ -3,11 +3,18 @@
 from datetime import datetime, timezone, timedelta
 import time
 from faster_whisper import WhisperModel
+from .models import SoundClip, TranscribedWord
 
+# Pops sound clips off queue_sound, translates, pushes sets of words onto queue_text
+# queue_sound items:
+#   models.SoundClip
+#
+# queue_text items:
+#   [models.TranscribedWord]
 def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
-    config_translate = config["translate"]
+    config_translate = config['translate']
 
-    model = WhisperModel(config_translate["model_size"], device=config_translate["device"], compute_type=config_translate["compute_type"])
+    model = WhisperModel(config_translate['model_size'], device=config_translate['device'], compute_type=config_translate['compute_type'])
 
     while True:
         # See if the process should stop
@@ -16,16 +23,25 @@ def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
 
         # Wait for another sound clip to pop off the queue
         if queue_sound.empty():
-            time.sleep(1)
+            print('transcriber is sleeping')
+            time.sleep(0.333)
         else:
             clip = queue_sound.get()
-            words = transcribe_chunk(model, clip[0], clip[1])
+
+            start = datetime.now(timezone.utc)
+            words = transcribe_clip(model, clip.start_time, clip.stop_time, clip.clip)
+            stop = datetime.now(timezone.utc)
+
+            clip_len = (clip.stop_time - clip.start_time).total_seconds()
+            trans_len = (stop - start).total_seconds()
+
+            if trans_len > clip_len:
+                print('Translation took longer than clip length.  Either use gpu or increase number of transcriber workers.  clip len: %.2fs, translation len: %.2fs' % (clip_len, trans_len))
 
             if len(words) > 0:
                 queue_text.put(words)
 
-
-def transcribe_chunk(model, clip_time, clip):
+def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
     # NOTE: segments is a generator, so need to iterate to get the translation (can't set breakpoint and see anything until after iterating)
 
     # condition_on_previous_text: If True, the previous output of the model is provided
@@ -37,9 +53,7 @@ def transcribe_chunk(model, clip_time, clip):
 
     start = datetime.now(timezone.utc)
 
-    segments, _ = model.transcribe(clip, language="en", word_timestamps=True, condition_on_previous_text=False)
-
-    elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=False)
 
     retVal = []
 
@@ -58,11 +72,13 @@ def transcribe_chunk(model, clip_time, clip):
             #
             # Leaving that decision for the function that has results from both streams
 
-            retVal.append((
-                clip_time,
-                elapsed,
-                clip_time + timedelta(seconds=word.start),
-                clip_time + timedelta(seconds=word.end),
+            retVal.append(TranscribedWord(
+                clip_time_start,
+                clip_time_stop,
+                start,
+                datetime.now(timezone.utc),
+                clip_time_start + timedelta(seconds=word.start),
+                clip_time_start + timedelta(seconds=word.end),
                 word.probability,
                 word.word))
             
