@@ -15,9 +15,11 @@ Since there's a chance that words will get chopped mid snippet, this creates two
 If the half length is 3 seconds, then one of the queues gets clips starting at time = 0, 6, 12, 18 ...
 The other queue gets clips starting at time = 3, 9, 15, 21 ...
 
-**Tuple placed on queue**
+**Object placed on queue: models.SoundClip**
+*all times are utc*
 ```
-datetime.now(timezone.utc),
+start time
+stop time
 sound clip in the format that whisper wants (numpy array)
 ```
 
@@ -31,11 +33,26 @@ It uses whisper to translate into words
 
 There is an attempt to ignore silence, but sometimes words get halucinated
 
-**Tuple placed on queue**
-*each item placed on queue is one word*
+> CPU mode was taking longer than the length of the clip to translate.  Multiple instances didn't help, so it appears the only option is GPU, which requires these two to be installed
+>
+> https://developer.nvidia.com/cublas     (can just install cuda toolkit)
+>
+> https://developer.nvidia.com/cudnn      (need to download, unzip, copy dlls from bin into "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\ --version-- \bin")
+>
+> https://developer.nvidia.com/rdp/cudnn-archive        (latest is v9, but whisper wants v8 -- will probably change in the future)
+
+**Object placed on queue: models.TranscribedWord**
+*all times are utc, each item placed on queue is one word*
 ```
-utc start,
-utc end,
+clip start time
+clip stop time
+
+transcribe start time
+transcribe stop time
+
+word start time
+word stop time
+
 probability %,
 word text
 ```

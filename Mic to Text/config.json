@@ -7,7 +7,7 @@
         // Half sound clip length in seconds
         // A sound clip sent to the whisper translator is double this length.  There are two translators in their
         // own process getting clips staggered by this length (0-3, 3-6, 6-9... and another getting 1.5-4.5, 4.5-7.5, 7.5-10.5...)
-        "half_length": 1.5
+        "half_length": 1
     },
 
     "translate":
@@ -19,22 +19,22 @@
         "model_size": "distil-large-v3",
 
         // 'cpu' or 'cuda'      gpu requires     https://developer.nvidia.com/cublas     https://developer.nvidia.com/cudnn
-        "device": "cpu",
+        "device": "cuda",
 
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
-        "compute_type": "int8",
+        "compute_type": "float16",
 
         // When using cpu, it was taking longer to translate than the clip length.  So multiple instances of translator
         // were needed to keep up
-        "num_instances": 4
+        "num_instances": 1
     },
 
     "text_filter":
     {
         // Need to wait for both streams to process before trying to send the words.  These define the window of time
         // that words get sent (seconds in the past)
-        "send_delay_min": 10,
-        "send_delay_max": 20
+        "send_delay_min": 1.5,
+        "send_delay_max": 4
     }
 }

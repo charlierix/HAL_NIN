@@ -23,7 +23,7 @@ def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
 
         # Wait for another sound clip to pop off the queue
         if queue_sound.empty():
-            print('transcriber is sleeping')
+            print('........................transcriber is sleeping')
             time.sleep(0.333)
         else:
             clip = queue_sound.get()
