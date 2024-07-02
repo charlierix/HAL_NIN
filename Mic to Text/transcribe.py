@@ -21,21 +21,15 @@ if __name__ == "__main__":
 
     # Kick off processes
     mic_listener = multiprocessing.Process(target=mic_to_soundclips, args=(queue_even, queue_odd, queue_cancel, config))
-
-    transcribers = []
-    for _ in range(config['translate']['num_instances']):
-        transcribers.append(multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text1, queue_cancel, config)))
-        transcribers.append(multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text1, queue_cancel, config)))
-
+    transcriber_even = multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text1, queue_cancel, config))
+    transcriber_odd = multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text1, queue_cancel, config))
     text_filter = multiprocessing.Process(target=filter_text_streams, args=(queue_text1, queue_text2, queue_cancel, config))
 
     # TODO: instead of writing to queue_text2, do http puts
 
     mic_listener.start()
-
-    for transcriber in transcribers:
-        transcriber.start()
-
+    transcriber_even.start()
+    transcriber_odd.start()
     text_filter.start()
 
     # Wait for backspace key
@@ -47,10 +41,8 @@ if __name__ == "__main__":
 
     # Clean up
     mic_listener.join()
-
-    for transcriber in transcribers:
-        transcriber.join()
-
+    transcriber_even.join()
+    transcriber_odd.join()
     text_filter.join()
 
     print('finished')

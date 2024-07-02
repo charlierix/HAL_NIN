@@ -23,11 +23,7 @@
 
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
-        "compute_type": "float16",
-
-        // When using cpu, it was taking longer to translate than the clip length.  So multiple instances of translator
-        // were needed to keep up
-        "num_instances": 1
+        "compute_type": "float16"
     },
 
     "text_filter":
