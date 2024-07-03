@@ -11,7 +11,7 @@ from .models import SoundClip, TranscribedWord
 #
 # queue_text items:
 #   [models.TranscribedWord]
-def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
+def soundclips_to_text(queue_sound, queue_text, name, cliptime_offset, queue_cancel, config):
     config_translate = config['translate']
 
     model = WhisperModel(config_translate['model_size'], device=config_translate['device'], compute_type=config_translate['compute_type'])
@@ -29,7 +29,7 @@ def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
             clip = queue_sound.get()
 
             start = datetime.now(timezone.utc)
-            words = transcribe_clip(model, clip.start_time, clip.stop_time, clip.clip)
+            words = transcribe_clip(model, clip.start_time + cliptime_offset, clip.stop_time + cliptime_offset, clip.clip, name)
             stop = datetime.now(timezone.utc)
 
             clip_len = (clip.stop_time - clip.start_time).total_seconds()
@@ -41,7 +41,7 @@ def soundclips_to_text(queue_sound, queue_text, queue_cancel, config):
             if len(words) > 0:
                 queue_text.put(words)
 
-def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
+def transcribe_clip(model, clip_time_start, clip_time_stop, clip, name):
     # NOTE: segments is a generator, so need to iterate to get the translation (can't set breakpoint and see anything until after iterating)
 
     # condition_on_previous_text: If True, the previous output of the model is provided
@@ -53,7 +53,7 @@ def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
 
     start = datetime.now(timezone.utc)
 
-    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=False)
+    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=True)
 
     retVal = []
 
@@ -75,6 +75,7 @@ def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
             retVal.append(TranscribedWord(
                 clip_time_start,
                 clip_time_stop,
+                name,
                 start,
                 datetime.now(timezone.utc),
                 clip_time_start + timedelta(seconds=word.start),

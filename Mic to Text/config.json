@@ -7,7 +7,7 @@
         // Half sound clip length in seconds
         // A sound clip sent to the whisper translator is double this length.  There are two translators in their
         // own process getting clips staggered by this length (0-3, 3-6, 6-9... and another getting 1.5-4.5, 4.5-7.5, 7.5-10.5...)
-        "half_length": 1
+        "half_length": 3
     },
 
     "translate":
@@ -30,7 +30,11 @@
     {
         // Need to wait for both streams to process before trying to send the words.  These define the window of time
         // that words get sent (seconds in the past)
-        "send_delay_min": 1.5,
-        "send_delay_max": 4
+        // "send_delay_min": 3,
+        // "send_delay_max": 8
+
+        "send_delay_min": 8,
+        "send_delay_max": 12
+
     }
 }

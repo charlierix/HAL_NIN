@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json5        # json5 supports json with comments
 import keyboard
 import multiprocessing
@@ -21,8 +22,8 @@ if __name__ == "__main__":
 
     # Kick off processes
     mic_listener = multiprocessing.Process(target=mic_to_soundclips, args=(queue_even, queue_odd, queue_cancel, config))
-    transcriber_even = multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text1, queue_cancel, config))
-    transcriber_odd = multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text1, queue_cancel, config))
+    transcriber_even = multiprocessing.Process(target=soundclips_to_text, args=(queue_even, queue_text1, 'even', timedelta(seconds=0), queue_cancel, config))
+    transcriber_odd = multiprocessing.Process(target=soundclips_to_text, args=(queue_odd, queue_text1, 'odd', timedelta(seconds=config['audio']['half_length']), queue_cancel, config))
     text_filter = multiprocessing.Process(target=filter_text_streams, args=(queue_text1, queue_text2, queue_cancel, config))
 
     # TODO: instead of writing to queue_text2, do http puts

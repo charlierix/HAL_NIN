@@ -6,9 +6,10 @@ class SoundClip:
         self.clip = clip
 
 class TranscribedWord:
-    def __init__(self, clip_time_start, clip_time_stop, transcribe_start, transcribe_stop, word_start, word_stop, word_probability, word):
+    def __init__(self, clip_time_start, clip_time_stop, transcriber_name, transcribe_start, transcribe_stop, word_start, word_stop, word_probability, word):
         self.clip_time_start = clip_time_start
         self.clip_time_stop = clip_time_stop
+        self.transcriber_name = transcriber_name
         self.transcribe_start = transcribe_start
         self.transcribe_stop = transcribe_stop
         self.word_start = word_start

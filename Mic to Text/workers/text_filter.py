@@ -66,7 +66,8 @@ def get_words_in_window(buffer, sendwindow_start, sendwindow_stop, now, log):
 
         elif buffer[index].word_start <= sendwindow_stop:
             # In the window, move to return list
-            print(buffer[index].word + '    (word in window)')
+            word_display = buffer[index].word.upper() if buffer[index].word_probability >= 0.75 else buffer[index].word.lower()
+            print('%s          (word in window | %s)' % (word_display, buffer[index].transcriber_name))
             retVal.append(buffer.pop(index))
             
         index -= 1
@@ -109,6 +110,7 @@ def log_window(log, words_in_window, sendwindow_start, sendwindow_stop, now):
 def add_word_to_log(log, word):
     log.write('"clip_time_start": "' + str(word.clip_time_start) + '",')
     log.write('"clip_time_stop": "' + str(word.clip_time_stop) + '",')
+    log.write('"transcriber_name": "' + word.transcriber_name + '"')
     log.write('"transcribe_start": "' + str(word.transcribe_start) + '",')
     log.write('"transcribe_stop": "' + str(word.transcribe_stop) + '",')
     log.write('"word_start": "' + str(word.word_start) + '",')
