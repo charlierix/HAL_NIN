@@ -22,5 +22,7 @@
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
         "compute_type": "float16"
-    }
+    },
+
+    "should_log": true
 }
