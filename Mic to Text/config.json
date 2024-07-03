@@ -1,0 +1,26 @@
+{
+    "audio":
+    {
+        // 44100 is a choice for higher quality.  I didn't notice enough difference to justify it when it's just mic and talking
+        "rate": 44100,
+
+        // Sound clip length in seconds
+        "clip_length": 3
+    },
+
+    "translate":
+    {
+        // large-v3          1550 M params       https://huggingface.co/openai/whisper-large-v3
+        // distil-large-v3   756 M params        https://huggingface.co/distil-whisper/distil-large-v3
+        // medium.en         769 M params        https://huggingface.co/openai/whisper-medium.en
+        // small.en          244 M params        https://huggingface.co/openai/whisper-small.en
+        "model_size": "distil-large-v3",
+
+        // 'cpu' or 'cuda'      gpu requires     https://developer.nvidia.com/cublas     https://developer.nvidia.com/cudnn
+        "device": "cuda",
+
+        // if cpu, use 'int8'
+        // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
+        "compute_type": "float16"
+    }
+}
