@@ -63,7 +63,7 @@ def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
 
     start = datetime.now(timezone.utc)
 
-    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=True)
+    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=False)
 
     retVal = []
 

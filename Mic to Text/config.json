@@ -1,11 +1,12 @@
 {
     "audio":
     {
-        // 44100 is a choice for higher quality.  I didn't notice enough difference to justify it when it's just mic and talking
-        "rate": 44100,
+        // 44100 is a choice for higher quality
+        // NOTE: was getting garbage with 44100
+        "rate": 16000,
 
         // Sound clip length in seconds
-        "clip_length": 3
+        "clip_length": 2.5
     },
 
     "translate":
@@ -21,7 +22,8 @@
 
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
-        "compute_type": "float16"
+        // NOTE: I got terrible results with float16.  Maybe it wasn't aligned with ... something?
+        "compute_type": "int8_float16"
     },
 
     "should_log": true
