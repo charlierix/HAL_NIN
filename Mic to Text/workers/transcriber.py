@@ -14,6 +14,10 @@ from .models import SoundClip, TranscribedWord
 #   [models.TranscribedWord]
 def soundclips_to_text(queue_sound, queue_cancel, config, log_folder):
     config_translate = config['translate']
+    language = config_translate['language']
+    if language == '':
+        language = None
+    condition_on_previous_text = config_translate['condition_on_previous_text']
     should_log = config['should_log']
 
     model = WhisperModel(config_translate['model_size'], device=config_translate['device'], compute_type=config_translate['compute_type'])
@@ -33,7 +37,7 @@ def soundclips_to_text(queue_sound, queue_cancel, config, log_folder):
             clip = queue_sound.get()
 
             start = datetime.now(timezone.utc)
-            words = transcribe_clip(model, clip.start_time, clip.stop_time, clip.clip)
+            words = transcribe_clip(model, clip.start_time, clip.stop_time, clip.clip, language, condition_on_previous_text)
             stop = datetime.now(timezone.utc)
 
             clip_len = (clip.stop_time - clip.start_time).total_seconds()
@@ -51,19 +55,12 @@ def soundclips_to_text(queue_sound, queue_cancel, config, log_folder):
     if should_log:
         write_log_file(all_words, log_folder)
 
-def transcribe_clip(model, clip_time_start, clip_time_stop, clip):
+def transcribe_clip(model, clip_time_start, clip_time_stop, clip, language, condition_on_previous_text):
     # NOTE: segments is a generator, so need to iterate to get the translation (can't set breakpoint and see anything until after iterating)
-
-    # condition_on_previous_text: If True, the previous output of the model is provided
-    #   as a prompt for the next window; disabling may make the text inconsistent across
-    #   windows, but the model becomes less prone to getting stuck in a failure loop,
-    #   such as repetition looping or timestamps going out of sync.
-    #
-    # this defaults to true, but trying with false to hopefully get cleaner translations
 
     start = datetime.now(timezone.utc)
 
-    segments, _ = model.transcribe(clip, language='en', word_timestamps=True, condition_on_previous_text=False)
+    segments, _ = model.transcribe(clip, language=language, word_timestamps=True, condition_on_previous_text=condition_on_previous_text)
 
     retVal = []
 

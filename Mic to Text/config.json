@@ -23,7 +23,21 @@
         // if cpu, use 'int8'
         // if cuda, use 'float16' (FP16) or 'int8_float16' (INT8)
         // NOTE: I got terrible results with float16.  Maybe it wasn't aligned with ... something?
-        "compute_type": "int8_float16"
+        "compute_type": "int8_float16",
+
+        // For a list, search for _LANGUAGE_CODES in this file:
+        // https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/tokenizer.py
+        //
+        // Use "" for auto detect, but that may require 30 seconds of audio to work
+        "language": "en",
+
+        // condition_on_previous_text: If True, the previous output of the model is provided
+        //   as a prompt for the next window; disabling may make the text inconsistent across
+        //   windows, but the model becomes less prone to getting stuck in a failure loop,
+        //   such as repetition looping or timestamps going out of sync.
+        //
+        // this defaults to true, but false seems to give clean results
+        "condition_on_previous_text": false
     },
 
     "should_log": true

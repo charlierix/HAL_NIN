@@ -52,7 +52,10 @@ if __name__ == "__main__":
     while not queue_sound.empty():      # the queue needs to be empty or join never finishes (cancel_join_thread didn't work)
         queue_sound.get()
 
+    print('joining mic_listener')
     mic_listener.join()
+    
+    print('joining transcriber')
     transcriber.join()
 
     print('finished')
