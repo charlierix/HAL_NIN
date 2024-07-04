@@ -3,6 +3,7 @@ import json5        # json5 supports json with comments
 import keyboard
 import multiprocessing
 import os
+import time
 
 from workers.mic_listener import mic_to_soundclips
 from workers.transcriber import soundclips_to_text
@@ -38,10 +39,19 @@ if __name__ == "__main__":
     # NOTE: keyboard relies on root access
     while True:
         if keyboard.read_key() == 'backspace':
+            print('quitting...')
+            queue_cancel.put('stop it')     # aparently, items left in the queue will cause join() to never complete.  So each process will pop one item off the queue
             queue_cancel.put('stop it')
+
+            while not queue_cancel.empty():
+                time.sleep(0.15)
+
             break
 
     # Clean up
+    while not queue_sound.empty():      # the queue needs to be empty or join never finishes (cancel_join_thread didn't work)
+        queue_sound.get()
+
     mic_listener.join()
     transcriber.join()
 

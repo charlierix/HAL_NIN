@@ -22,22 +22,23 @@ def mic_to_soundclips(queue_sound, queue_cancel, config, log_folder):
     stream = audio.open(format=format, channels=1, rate=rate, input=True, frames_per_buffer=1024)
 
     clip = None
-    full_sound = b''
+    full_sound = []
 
     while True:
         # See if the process should stop
         if not queue_cancel.empty():
+            queue_cancel.get()
             break
 
         clip = record_clip(stream, rate, clip_length, should_log, full_sound)
         queue_sound.put(clip)     # models.SoundClip
 
+    if should_log:
+        write_wav_file(log_folder, audio, format, rate, full_sound)
+
     stream.stop_stream()
     stream.close()
     audio.terminate()
-
-    if should_log:
-        write_wav_file(log_folder, audio, format, rate, full_sound)
 
 # Records clip_length seconds of audio into a list
 def record_clip(stream, rate, clip_length, should_log, full_sound):
@@ -48,10 +49,10 @@ def record_clip(stream, rate, clip_length, should_log, full_sound):
         data = stream.read(1024)
         all_data += data
 
-    stop = datetime.now(timezone.utc)
+        if should_log:
+            full_sound.append(data)
 
-    if should_log:
-        full_sound += all_data
+    stop = datetime.now(timezone.utc)
 
     return SoundClip(start, stop, np.frombuffer(all_data, np.int16).astype(np.float32) / 32768.0)       # I'm guessing it's 32768 because format is pyaudio.paInt16.  I saw another example that was using 8 bit and they divided by 255
 
@@ -62,5 +63,5 @@ def write_wav_file(log_folder, audio, format, rate, full_sound):
     sound_file.setnchannels(1)
     sound_file.setsampwidth(audio.get_sample_size(format))
     sound_file.setframerate(rate)
-    sound_file.writeframes(full_sound)
+    sound_file.writeframes(b''.join(full_sound))
     sound_file.close()
