@@ -1,0 +1,6 @@
+@AudioChat_HostAddress = http://localhost:5030
+
+GET {{AudioChat_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioChat", "AudioChat.csproj", "{5156C4AE-9B3F-4B02-9307-71FD28818223}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5156C4AE-9B3F-4B02-9307-71FD28818223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5156C4AE-9B3F-4B02-9307-71FD28818223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5156C4AE-9B3F-4B02-9307-71FD28818223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5156C4AE-9B3F-4B02-9307-71FD28818223}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FF73892B-EDA1-45C1-AE1E-E4778533AE5E}
+	EndGlobalSection
+EndGlobal
