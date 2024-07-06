@@ -1,7 +1,7 @@
-﻿using AudioChat.Models;
+﻿using CentralListeners.WebApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AudioChat.Controllers
+namespace CentralListeners.WebApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]

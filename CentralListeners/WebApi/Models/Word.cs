@@ -1,4 +1,4 @@
-﻿namespace AudioChat.Models
+﻿namespace CentralListeners.WebApi.Models
 {
     public class Word
     {

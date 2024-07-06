@@ -1,0 +1,6 @@
+@HostAddress = http://localhost:5030
+
+GET {{HostAddress}}/visualizewords/
+Accept: application/json
+
+###
