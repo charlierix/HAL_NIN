@@ -20,6 +20,7 @@ namespace Core.WordMarquee
 
         private readonly object _lock = new object();
 
+        private readonly List<Lane> _lanes = new List<Lane>();      // this is needed when a window gets closed and a new one is create later
         private readonly Queue<Lane> _pending_lanes = new Queue<Lane>();
         private readonly Queue<Word> _pending_words = new Queue<Word>();
 
@@ -62,6 +63,8 @@ namespace Core.WordMarquee
 
             lock (instance._lock)
             {
+                instance._lanes.Add(lane);
+
                 if (instance._window == null)
                 {
                     instance._pending_lanes.Enqueue(lane);
