@@ -1,7 +1,11 @@
-﻿using Game.Math_WPF.WPF;
+﻿using Game.Core;
+using Game.Math_WPF.Mathematics;
+using Game.Math_WPF.WPF;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
+using System.Windows.Threading;
 
 namespace Core.WordMarquee
 {
@@ -14,6 +18,7 @@ namespace Core.WordMarquee
             public Lane Lane { get; init; }
             public Brush Brush { get; init; }
             public double Canvas_Y { get; init; }
+            public Canvas Canvas { get; init; }
             public Queue<Word> Pending { get; init; }
             public List<WordShowing> Showing { get; init; }
         }
@@ -37,7 +42,7 @@ namespace Core.WordMarquee
         #region Declaration Section
 
         //private const double SPEED = -250;        // pixels per second
-        private const double SPEED = -50;
+        private const double SPEED = -100;
 
         private const double FONTSIZE_MIN = 18;
         private const double FONTSIZE_MAX = 48;
@@ -47,7 +52,13 @@ namespace Core.WordMarquee
 
         private const double GAP_PERCENTHEIGHT = 0.333;     // gap between words is height * this percent
 
+        private const double VERTICAL_PAD = 4;      // extra pixels to add to the canvas height (actual is twice this - above and below)
+
         private readonly List<LaneCanvas> _lanes = new List<LaneCanvas>();
+
+        private readonly DispatcherTimer _timer;
+
+        private DateTime? _prev_tick = null;
 
         #endregion
 
@@ -58,6 +69,10 @@ namespace Core.WordMarquee
             InitializeComponent();
 
             Background = SystemColors.ControlBrush;
+
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromMicroseconds(50);
+            _timer.Tick += Timer_Tick;
         }
 
         #endregion
@@ -73,16 +88,18 @@ namespace Core.WordMarquee
                 txtReport.Text += $"{newline}DefineLane: {lane}";
 
                 // Create Canvas
+                if (_lanes.Any(o => o.Lane.Name == lane.Name))
+                    throw new ArgumentException($"Lane Name already exists: '{lane.Name}'");
+
                 int insert_index = GetInsertIndex(lane);
 
                 Color forecolor = UtilityWPF.ColorFromHex(lane.Color);
-                //Color backcolor = UtilityWPF.OppositeColor(forecolor);        // all the opposites are nearly black
                 Color backcolor = UtilityWPF.GetRandomColor(64, 64, 192);
 
                 Canvas canvas = new Canvas()
                 {
-                    //Background = new SolidColorBrush(Color.FromArgb(32, backcolor.R, backcolor.G, backcolor.B)),
                     Background = new SolidColorBrush(backcolor),
+                    ClipToBounds = true,
                 };
                 panel.Children.Insert(insert_index, canvas);
 
@@ -96,7 +113,7 @@ namespace Core.WordMarquee
                 canvas.Children.Add(textblock);
 
                 textblock.Measure(new Size(1000, 1000));
-                double canvas_height = textblock.DesiredSize.Height;        // there is already some vertical padding in this height, so no need to add more
+                double canvas_height = textblock.DesiredSize.Height + VERTICAL_PAD * 2;
 
                 canvas.Children.Clear();
 
@@ -107,6 +124,7 @@ namespace Core.WordMarquee
                     Lane = lane,
                     Brush = new SolidColorBrush(forecolor),
                     Canvas_Y = canvas_height / 2,
+                    Canvas = canvas,
                     Pending = new Queue<Word>(),
                     Showing = new List<WordShowing>(),
                 });
@@ -121,8 +139,54 @@ namespace Core.WordMarquee
         {
             try
             {
+                // Report
                 string newline = txtReport.Text.Length > 0 ? "\r\n" : "";
                 txtReport.Text += $"{newline}AddWord: {word}";
+
+                // Store Word
+                LaneCanvas lane = _lanes.FirstOrDefault(o => o.Lane.Name == word.LaneName);
+                if (lane == null)
+                    throw new ArgumentException($"No lane with the name '{word.LaneName}' | {_lanes.Select(o => $"'{o.Lane.Name}'").OrderBy(o => o).ToJoin(", ")}");
+
+                lane.Pending.Enqueue(word);
+
+                _timer.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        #endregion
+
+        #region Event Listeners
+
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_lanes.Count == 0 || _lanes.All(o => o.Pending.Count == 0 && o.Showing.Count == 0))
+                {
+                    _prev_tick = null;
+                    _timer.Stop();
+                    return;
+                }
+
+                DateTime now = DateTime.UtcNow;
+
+                if (_prev_tick != null)
+                {
+                    double elapsed_seconds = (now - _prev_tick.Value).TotalSeconds;
+
+                    foreach (var lane in _lanes)
+                        MoveWords(lane, elapsed_seconds);
+                }
+
+                foreach (var lane in _lanes)
+                    TryRenderNewWord(lane);
+
+                _prev_tick = now;
             }
             catch (Exception ex)
             {
@@ -146,6 +210,109 @@ namespace Core.WordMarquee
             }
 
             return _lanes.Count;
+        }
+
+        /// <summary>
+        /// Slides the positions of the words
+        /// </summary>
+        private void MoveWords(LaneCanvas lane, double elapsed_seconds)
+        {
+            if (SPEED >= 0)
+                throw new InvalidOperationException($"This function is hardcoded for negative speeds: {SPEED}");
+
+            double delta = SPEED * Math.Min(0.5, elapsed_seconds);     // capping time in case there's a lag spike
+
+            int index = 0;
+
+            while (index < lane.Showing.Count)
+            {
+                WordShowing word = lane.Showing[index];
+
+                word.Position = new Point(word.Position.X + delta, word.Position.Y);
+
+                if (word.Position.X + word.Size.Width < 0)
+                {
+                    lane.Canvas.Children.Remove(word.TextBlock);
+                    lane.Showing.RemoveAt(index);
+                }
+                else
+                {
+                    // TODO: test if doing a translate transform has difference in performance
+
+                    Canvas.SetLeft(word.TextBlock, word.Position.X);
+                    //Canvas.SetTop(word.TextBlock, word.Position.Y);       // start setting this if it could move vertically
+                    index++;
+                }
+            }
+        }
+
+        private void TryRenderNewWord(LaneCanvas lane)
+        {
+            if (!CanAddWord(lane))
+                return;
+
+            Word word = lane.Pending.Dequeue();
+
+            var textblock = new OutlinedTextBlock()
+            {
+                Text = word.Text,
+                FontWeight = FontWeights.Black,
+                Fill = lane.Brush,
+                Stroke = new SolidColorBrush(Color.FromArgb(192, 0, 0, 0)),
+                StrokeThickness = 1,
+                FontSize = UtilityMath.GetScaledValue_Capped(FONTSIZE_MIN, FONTSIZE_MAX, 0, 1, word.Probability),
+                //Opacity = GetScaledValue(OPACITY_MIN, OPACITY_MAX, 0, 1, word.Probability),       // can't use semitransparent, since dropshadow effect will darken it
+                Effect = new DropShadowEffect()
+                {
+                    Color = Colors.Black,
+                    Direction = 0,
+                    ShadowDepth = 0,
+                    BlurRadius = UtilityMath.GetScaledValue_Capped(BLUR_MIN, BLUR_MAX, 0, 1, word.Probability),
+                },
+            };
+
+            lane.Canvas.Children.Add(textblock);
+
+            textblock.Measure(lane.Canvas.RenderSize);
+            Size size = textblock.DesiredSize;
+
+            double x = lane.Canvas.ActualWidth + 10;
+            if (lane.Showing.Count > 0)
+            {
+                var prev = lane.Showing[^1];
+
+                double prev_right = prev.Position.X + prev.Size.Width;
+                double gap = (prev.Size.Height * GAP_PERCENTHEIGHT + size.Height * GAP_PERCENTHEIGHT) / 2;
+
+                x = Math.Max(x, prev_right + gap);
+            }
+
+            Canvas.SetLeft(textblock, x);
+
+            double y = lane.Canvas_Y - size.Height / 2;
+            Canvas.SetTop(textblock, y);
+
+            lane.Showing.Add(new WordShowing()
+            {
+                Word = word,
+                TextBlock = textblock,
+                Size = size,
+                Position = new Point(x, y),
+            });
+        }
+
+        private static bool CanAddWord(LaneCanvas lane)
+        {
+            if (lane.Pending.Count == 0)
+                return false;
+
+            if (lane.Showing.Count == 0)
+                return true;
+
+            double rightmost_pos = lane.Showing[^1].Position.X + lane.Showing[^1].Size.Width;
+
+            // Don't wait until it's fully on the screen.  Allow new words to be added to the right
+            return rightmost_pos <= lane.Canvas.ActualWidth + (lane.Showing[^1].Size.Width * 1.5);
         }
 
         #endregion

@@ -93,6 +93,8 @@ namespace Core.WordMarquee
                     instance._inactivity_timer.Stop();
                     instance._inactivity_timer.Start();
 
+                    instance._wakeup_timer.Start();
+
                     var dispatcher = Dispatcher.FromThread(instance._ui_thread);
                     dispatcher.Invoke(() =>
                     {
