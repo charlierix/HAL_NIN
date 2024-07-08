@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Game.Math_WPF.Mathematics;
 
 namespace Core.WordMarquee
 {
@@ -34,6 +30,11 @@ namespace Core.WordMarquee
         /// to each other)
         /// </summary>
         public int SortOrder { get; init; }
+
+        public override string ToString()
+        {
+            return $"{Name} | #{Color} | SortOrder: {SortOrder}";
+        }
     }
 
     /// <summary>
@@ -56,5 +57,10 @@ namespace Core.WordMarquee
         /// The text to show on screen
         /// </summary>
         public string Text { get; init; }
+
+        public override string ToString()
+        {
+            return $"Lane: {LaneName} | Prob: {Probability.ToStringSignificantDigits(2)} | {Text}";
+        }
     }
 }

@@ -5,7 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TestApp"
         Title="Tester" Width="600" Height="450">
-    <Grid>
-
+    <Grid Margin="8">
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Label Content="Word Marquee" FontWeight="Bold"/>
+            <Button Content="Add Lane" Click="WordMarquee_AddLane_Click"/>
+            <Button Content="Add Word" Click="WordMarquee_AddWord_Click"/>
+        </StackPanel>
     </Grid>
 </Window>

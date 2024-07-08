@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Core.WordMarquee"
         mc:Ignorable="d"
-        Title="WordMarqueeWindow" Height="450" Width="800">
-    <Grid>
-        
+        Title="WordMarqueeWindow" Width="800" Height="450" ShowInTaskbar="True">
+    <Grid Margin="8">
+        <TextBox x:Name="txtReport" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
     </Grid>
 </Window>
