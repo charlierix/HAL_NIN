@@ -41,8 +41,7 @@ namespace Core.WordMarquee
 
         #region Declaration Section
 
-        //private const double SPEED = -250;        // pixels per second
-        private const double SPEED = -100;
+        private const double SPEED = -250;        // pixels per second
 
         private const double FONTSIZE_MIN = 18;
         private const double FONTSIZE_MAX = 48;

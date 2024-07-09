@@ -12,6 +12,9 @@
             <Button Content="Add Word" Click="WordMarquee_AddWord_Click"/>
             <Button Content="Add Word in 2 mins" Click="AddWordTwoMins_Click"/>
             <TextBlock x:Name="lblTime" Visibility="Collapsed"/>
+
+            <Button Content="Force Open" Margin="0,8,0,0" Click="ForceOpen_Click"/>
+            <Button Content="Force Close" Click="ForceClose_Click"/>
         </StackPanel>
     </Grid>
 </Window>

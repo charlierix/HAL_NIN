@@ -64,6 +64,29 @@ namespace TestApp
             }
         }
 
+        private void ForceOpen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                WordMarqueeManager.ForceOpen();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void ForceClose_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                WordMarqueeManager.ForceClose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void AddWordTwoMins_Click(object sender, RoutedEventArgs e)
         {
             try
