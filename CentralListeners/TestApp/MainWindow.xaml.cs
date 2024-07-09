@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace TestApp
 {
@@ -19,11 +20,18 @@ namespace TestApp
     {
         private readonly List<Lane> _lanes = new List<Lane>();
 
+        private readonly DispatcherTimer _timer_delayed_word;
+        private DateTime _delay_time;
+
         public MainWindow()
         {
             InitializeComponent();
 
             Background = SystemColors.ControlBrush;
+
+            _timer_delayed_word = new DispatcherTimer();
+            _timer_delayed_word.Interval = TimeSpan.FromMicroseconds(333);
+            _timer_delayed_word.Tick += Timer_DelayedWord_Tick;
         }
 
         private void WordMarquee_AddLane_Click(object sender, RoutedEventArgs e)
@@ -48,21 +56,62 @@ namespace TestApp
         {
             try
             {
-                string lane_name = _lanes.Count > 0 ?
-                    _lanes[StaticRandom.Next(_lanes.Count)].Name :
-                    Guid.NewGuid().ToString();      // allow an invalid name so that lower code can be tested
-
-                WordMarqueeManager2.AddWord(new Word()
-                {
-                    LaneName = lane_name,
-                    Probability = StaticRandom.NextPow(0.3),
-                    Text = GetRandomText(StaticRandom.GetRandomForThread()),
-                });
+                AddWord();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void AddWordTwoMins_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _delay_time = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+                _timer_delayed_word.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void Timer_DelayedWord_Tick(object? sender, EventArgs e)
+        {
+            try
+            {
+                DateTime now = DateTime.UtcNow;
+
+                if (now >= _delay_time)
+                {
+                    _timer_delayed_word.Stop();
+                    lblTime.Visibility = Visibility.Collapsed;
+                    AddWord();
+                }
+                else
+                {
+                    lblTime.Visibility = Visibility.Visible;
+                    lblTime.Text = $"{(_delay_time - now).TotalSeconds.ToInt_Round()} seconds";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void AddWord()
+        {
+            string lane_name = _lanes.Count > 0 ?
+                _lanes[StaticRandom.Next(_lanes.Count)].Name :
+                Guid.NewGuid().ToString();      // allow an invalid name so that lower code can be tested
+
+            WordMarqueeManager2.AddWord(new Word()
+            {
+                LaneName = lane_name,
+                Probability = StaticRandom.NextPow(0.3),
+                Text = GetRandomText(StaticRandom.GetRandomForThread()),
+            });
         }
 
         private static string GetRandomText(Random rand)

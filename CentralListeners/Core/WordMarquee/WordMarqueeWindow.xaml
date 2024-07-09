@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Core.WordMarquee"
         mc:Ignorable="d"
-        Title="WordMarqueeWindow" Width="800" Height="800" ShowInTaskbar="True">
+        Title="WordMarqueeWindow" Topmost="True" Width="800" Height="800" ShowInTaskbar="True">
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="1*"/>
