@@ -45,7 +45,7 @@ namespace TestApp
                     SortOrder = StaticRandom.Next(0, 12),
                 });
 
-                WordMarqueeManager2.AddLane(_lanes[^1]);
+                WordMarqueeManager.AddLane(_lanes[^1]);
             }
             catch (Exception ex)
             {
@@ -106,7 +106,7 @@ namespace TestApp
                 _lanes[StaticRandom.Next(_lanes.Count)].Name :
                 Guid.NewGuid().ToString();      // allow an invalid name so that lower code can be tested
 
-            WordMarqueeManager2.AddWord(new Word()
+            WordMarqueeManager.AddWord(new Word()
             {
                 LaneName = lane_name,
                 Probability = StaticRandom.NextPow(0.3),

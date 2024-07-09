@@ -14,9 +14,9 @@ namespace Core.WordMarquee
     /// Singleton that routes calls to WordMarqueeWindow (in its own thread), takes care of hiding the
     /// window after inactivity
     /// </summary>
-    public class WordMarqueeManager2
+    public class WordMarqueeManager
     {
-        private static readonly Lazy<WordMarqueeManager2> _instance = new Lazy<WordMarqueeManager2>(() => new WordMarqueeManager2());
+        private static readonly Lazy<WordMarqueeManager> _instance = new Lazy<WordMarqueeManager>(() => new WordMarqueeManager());
 
         private readonly object _lock = new object();
 
@@ -30,7 +30,7 @@ namespace Core.WordMarquee
         private readonly Thread _ui_thread = null;      // the thread that the window runs on
         private WordMarqueeWindow _window = null;       // will be null during periods of inactivity (just minimizing for now)
 
-        private WordMarqueeManager2()
+        private WordMarqueeManager()
         {
             _ui_thread = new Thread(CreateNewWindow);
             _ui_thread.SetApartmentState(ApartmentState.STA);
