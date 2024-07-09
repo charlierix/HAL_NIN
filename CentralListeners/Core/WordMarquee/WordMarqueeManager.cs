@@ -14,7 +14,7 @@ namespace Core.WordMarquee
 
         private readonly object _lock = new();
 
-        private readonly List<Lane> _lanes = [];      // this is needed when a window gets closed and a new one is create later
+        private readonly Dictionary<string, Lane> _lanes = [];      // this is needed when a window gets closed and a new one is create later
         private readonly Queue<Word> _pending_words = new();
 
         private readonly System.Timers.Timer _show_timer;     // used to create a new window when words arrive while there is no window showing
@@ -56,9 +56,7 @@ namespace Core.WordMarquee
 
             lock (instance._lock)
             {
-                instance._lanes.Add(lane);
-
-                if (instance._window != null)
+                if (instance._lanes.TryAdd(lane.Name, lane) && instance._window != null)
                 {
                     var dispatcher = Dispatcher.FromThread(instance._ui_thread);
                     dispatcher.Invoke(() => instance._window.AddLane(lane));
@@ -111,7 +109,7 @@ namespace Core.WordMarquee
                     };
                     _window.Show();
 
-                    foreach (var lane in _lanes)
+                    foreach (var lane in _lanes.Values)
                         _window.AddLane(lane);
 
                     while (_pending_words.Count > 0)
@@ -129,7 +127,7 @@ namespace Core.WordMarquee
                     // Set the timer to keep firing in case the window shows later
                     _inactivity_timer.AutoReset = true;
                     _inactivity_timer.Start();
-                    return;     
+                    return;
                 }
 
                 _inactivity_timer.Stop();

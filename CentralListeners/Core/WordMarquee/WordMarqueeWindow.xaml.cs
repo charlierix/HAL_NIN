@@ -55,7 +55,8 @@ namespace Core.WordMarquee
 
         private const double VERTICAL_PAD = 4;      // extra pixels to add to the canvas height (actual is twice this - above and below)
 
-        private readonly List<LaneCanvas> _lanes = new List<LaneCanvas>();
+        private readonly List<LaneCanvas> _lanes = [];
+        private readonly string _unmatched_lane_name = Guid.NewGuid().ToString();
 
         private readonly DispatcherTimer _timer;
 
@@ -84,7 +85,7 @@ namespace Core.WordMarquee
             {
                 // Create Canvas
                 if (_lanes.Any(o => o.Lane.Name == lane.Name))
-                    throw new ArgumentException($"Lane Name already exists: '{lane.Name}'");
+                    throw new ArgumentException($"Lane name already exists: '{lane.Name}'");
 
                 int insert_index = GetInsertIndex(lane);
 
@@ -136,7 +137,7 @@ namespace Core.WordMarquee
             {
                 LaneCanvas lane = _lanes.FirstOrDefault(o => o.Lane.Name == word.LaneName);
                 if (lane == null)
-                    throw new ArgumentException($"No lane with the name '{word.LaneName}' | {_lanes.Select(o => $"'{o.Lane.Name}'").OrderBy(o => o).ToJoin(", ")}");
+                    lane = GetUnmatchedLane();
 
                 lane.Pending.Enqueue(word);
 
@@ -324,6 +325,25 @@ namespace Core.WordMarquee
             Width = screen.Width;
 
             Top = screen.Bottom - ActualHeight - SCREEN_BOTTOM_MARGIN;
+        }
+
+        /// <summary>
+        /// Creates unmatched lane if it doesn't exist, then returns the unmatched lane
+        /// </summary>
+        private LaneCanvas GetUnmatchedLane()
+        {
+            LaneCanvas lane = _lanes.FirstOrDefault(o => o.Lane.Name == _unmatched_lane_name);
+            if (lane != null)
+                return lane;
+
+            AddLane(new Lane()
+            {
+                Name = _unmatched_lane_name,
+                Color = "F0F",      // Colors.Magenta
+                SortOrder = int.MaxValue,
+            });
+
+            return _lanes.First(o => o.Lane.Name == _unmatched_lane_name);      // should be _lanes[^1], but search just to be safe
         }
 
         private static bool CanAddWord(LaneCanvas lane)
