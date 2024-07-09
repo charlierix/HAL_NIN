@@ -5,19 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Core.WordMarquee"
         mc:Ignorable="d"
-        Title="WordMarqueeWindow" Topmost="True" Width="800" Height="800" ShowInTaskbar="True">
-    <Grid Margin="8">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="8"/>
-            <RowDefinition Height="auto"/>
-        </Grid.RowDefinitions>
-        
-        <TextBox Grid.Row="0" x:Name="txtReport" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
-
-        <StackPanel x:Name="panel" Grid.Row="2">
-            <!--<Canvas Height="100" Background="Yellow"/>-->
-            <!--<Canvas Height="50" Background="Blue"/>-->
-        </StackPanel>
-    </Grid>
+        Title="WordMarqueeWindow" Topmost="True" WindowStyle="None" AllowsTransparency="True" Background="Transparent" SizeToContent="Height" MinHeight="40" Width="800" ShowInTaskbar="False" Loaded="Window_Loaded" SizeChanged="Window_SizeChanged">
+    <StackPanel x:Name="panel"/>
 </Window>

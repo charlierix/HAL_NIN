@@ -41,6 +41,8 @@ namespace Core.WordMarquee
 
         #region Declaration Section
 
+        private const double SCREEN_BOTTOM_MARGIN = 66;
+
         private const double SPEED = -250;        // pixels per second
 
         private const double FONTSIZE_MIN = 18;
@@ -67,8 +69,6 @@ namespace Core.WordMarquee
         {
             InitializeComponent();
 
-            Background = SystemColors.ControlBrush;
-
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromMilliseconds(1);
             _timer.Tick += Timer_Tick;
@@ -82,10 +82,6 @@ namespace Core.WordMarquee
         {
             try
             {
-                // Report
-                string newline = txtReport.Text.Length > 0 ? "\r\n" : "";
-                txtReport.Text += $"{newline}DefineLane: {lane}";
-
                 // Create Canvas
                 if (_lanes.Any(o => o.Lane.Name == lane.Name))
                     throw new ArgumentException($"Lane Name already exists: '{lane.Name}'");
@@ -93,11 +89,11 @@ namespace Core.WordMarquee
                 int insert_index = GetInsertIndex(lane);
 
                 Color forecolor = UtilityWPF.ColorFromHex(lane.Color);
-                Color backcolor = UtilityWPF.GetRandomColor(64, 64, 192);
+                //Color backcolor = UtilityWPF.GetRandomColor(32, 64, 192);
 
                 Canvas canvas = new Canvas()
                 {
-                    Background = new SolidColorBrush(backcolor),
+                    //Background = new SolidColorBrush(backcolor),
                     ClipToBounds = true,
                 };
                 panel.Children.Insert(insert_index, canvas);
@@ -138,11 +134,6 @@ namespace Core.WordMarquee
         {
             try
             {
-                // Report
-                string newline = txtReport.Text.Length > 0 ? "\r\n" : "";
-                txtReport.Text += $"{newline}AddWord: {word}";
-
-                // Store Word
                 LaneCanvas lane = _lanes.FirstOrDefault(o => o.Lane.Name == word.LaneName);
                 if (lane == null)
                     throw new ArgumentException($"No lane with the name '{word.LaneName}' | {_lanes.Select(o => $"'{o.Lane.Name}'").OrderBy(o => o).ToJoin(", ")}");
@@ -160,6 +151,31 @@ namespace Core.WordMarquee
         #endregion
 
         #region Event Listeners
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                PlaceWindow();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            try
+            {
+                if (e.HeightChanged)
+                    PlaceWindow();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private void Timer_Tick(object sender, EventArgs e)
         {
@@ -298,6 +314,16 @@ namespace Core.WordMarquee
                 Size = size,
                 Position = new Point(x, y),
             });
+        }
+
+        private void PlaceWindow()
+        {
+            Rect screen = UtilityWPF.GetCurrentScreen(PointToScreen(new Point()));
+
+            Left = screen.Left;
+            Width = screen.Width;
+
+            Top = screen.Bottom - ActualHeight - SCREEN_BOTTOM_MARGIN;
         }
 
         private static bool CanAddWord(LaneCanvas lane)
