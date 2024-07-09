@@ -70,7 +70,7 @@ namespace Core.WordMarquee
             Background = SystemColors.ControlBrush;
 
             _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromMicroseconds(50);
+            _timer.Interval = TimeSpan.FromMilliseconds(1);
             _timer.Tick += Timer_Tick;
         }
 
