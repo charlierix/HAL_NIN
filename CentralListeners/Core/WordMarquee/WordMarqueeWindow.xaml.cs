@@ -41,19 +41,37 @@ namespace Core.WordMarquee
 
         #region Declaration Section
 
-        private const double SCREEN_BOTTOM_MARGIN = 66;
 
-        private const double SPEED = -250;        // pixels per second
+        // TODO: don't block mouse
+        // TODO: fails when windows display setting scale is > 100%
 
+        // TODO: Make a master scale prop that looks at these values and calculates final values.  Even blur needs to increase when fontsize increases
+
+        // TODO: Config
         private const double FONTSIZE_MIN = 18;
         private const double FONTSIZE_MAX = 48;
+        //private const double FONTSIZE_MIN = 48;
+        //private const double FONTSIZE_MAX = 500;
 
-        private const double BLUR_MIN = 2;
-        private const double BLUR_MAX = 6;
-
-        private const double GAP_PERCENTHEIGHT = 0.333;     // gap between words is height * this percent
+        //private const double BLUR_MIN = 2;
+        //private const double BLUR_MAX = 6;
+        private const double BLUR_MIN = 3;
+        private const double BLUR_MAX = 9;
 
         private const double VERTICAL_PAD = 4;      // extra pixels to add to the canvas height (actual is twice this - above and below)
+
+        // TODO: backed up words should temporarily boost this (per canvas)
+        private const double SPEED = -250;        // pixels per second
+        //private const double SPEED = -3000;        // pixels per second
+
+        private const double SCREEN_BOTTOM_MARGIN = 66;
+
+
+
+
+
+
+        private const double GAP_PERCENTHEIGHT = 0.333;     // gap between words is height * this percent
 
         private readonly List<LaneCanvas> _lanes = [];
         private readonly string _unmatched_lane_name = Guid.NewGuid().ToString();

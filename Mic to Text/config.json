@@ -40,5 +40,14 @@
         "condition_on_previous_text": false
     },
 
-    "should_log": true
+    // This sends transcribed words to CentralListeners service (http posts)
+    "send_results":
+    {
+        "should_send_marquee": true,
+        "url_marquee": "http://localhost:5030/VisualizeWords",
+        // this needs to match a value in the appsettings.json of CentralListeners service (MarqueeText:SpeechLanes)
+        "sendername_marquee": "microphone"
+    },
+
+    "should_log": false
 }

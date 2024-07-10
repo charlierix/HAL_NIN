@@ -5,6 +5,7 @@ import json
 import time
 from faster_whisper import WhisperModel
 from .models import SoundClip, TranscribedWord
+from .send_httppost import send_http
 
 # Pops sound clips off queue_sound, translates, pushes sets of words onto queue_text
 # queue_sound items:
@@ -47,7 +48,7 @@ def soundclips_to_text(queue_sound, queue_cancel, config, log_folder):
                 print('Translation took longer than clip length.  Either use gpu or increase number of transcriber workers.  clip len: %.2fs, translation len: %.2fs' % (clip_len, trans_len))
 
             if len(words) > 0:
-                #queue_text.put(words)
+                send_http(words, config)
 
                 if should_log:
                     all_words.extend(words)
