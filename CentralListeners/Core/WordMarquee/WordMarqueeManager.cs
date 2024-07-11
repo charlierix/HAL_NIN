@@ -23,6 +23,8 @@ namespace Core.WordMarquee
         private readonly Thread _ui_thread = null;      // the thread that the window runs on
         private WordMarqueeWindow _window = null;       // will be null during periods of inactivity
 
+        private Settings _settings = null;
+
         private WordMarqueeManager()
         {
             _ui_thread = new Thread(Dispatcher.Run);
@@ -47,6 +49,16 @@ namespace Core.WordMarquee
             };
 
             _inactivity_timer.Elapsed += Inactivity_Elapsed;
+        }
+
+        public static void StoreSettings(Settings settings)
+        {
+            var instance = _instance.Value;
+
+            lock (instance._lock)
+            {
+                instance._settings = settings;      // if it's already there, just overwrite.  If a window is currently showing, it will use the old values until there is a timeout and a new window is shown
+            }
         }
 
         // Must have at least one lane before adding words
@@ -98,15 +110,10 @@ namespace Core.WordMarquee
 
                 dispatcher.Invoke(() =>
                 {
-                    int threadID = Environment.CurrentManagedThreadId;
+                    if (_settings == null)
+                        throw new InvalidOperationException("Settings need to be stored before adding words");
 
-                    // TODO: figure out if the window should position itself or if this should
-
-                    _window = new WordMarqueeWindow()
-                    {
-                        Title = $"Thread ID: {threadID}",
-                        //WindowStartupLocation = WindowStartupLocation.Manual,
-                    };
+                    _window = new WordMarqueeWindow(_settings);
                     _window.Show();
 
                     foreach (var lane in _lanes.Values)

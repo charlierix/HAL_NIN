@@ -2,6 +2,21 @@
 
 namespace Core.WordMarquee
 {
+    public record Settings
+    {
+        public double FontSize_Min { get; init; }
+        public double FontSize_Max { get; init; }
+
+        public double Blur_Min { get; init; }
+        public double Blur_Max { get; init; }
+
+        public double Vertical_Padding { get; init; }
+
+        public double Speed { get; init; }
+
+        public double Screen_Bottom_Margin { get; init; }
+    }
+
     /// <summary>
     /// Defines a slot that words will scroll through.  There can be multiple lanes visible at the same time
     /// </summary>

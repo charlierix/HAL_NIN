@@ -41,37 +41,9 @@ namespace Core.WordMarquee
 
         #region Declaration Section
 
-
-        // TODO: don't block mouse
-        // TODO: fails when windows display setting scale is > 100%
-
-        // TODO: Make a master scale prop that looks at these values and calculates final values.  Even blur needs to increase when fontsize increases
-
-        // TODO: Config
-        private const double FONTSIZE_MIN = 18;
-        private const double FONTSIZE_MAX = 48;
-        //private const double FONTSIZE_MIN = 48;
-        //private const double FONTSIZE_MAX = 500;
-
-        //private const double BLUR_MIN = 2;
-        //private const double BLUR_MAX = 6;
-        private const double BLUR_MIN = 3;
-        private const double BLUR_MAX = 9;
-
-        private const double VERTICAL_PAD = 4;      // extra pixels to add to the canvas height (actual is twice this - above and below)
-
-        // TODO: backed up words should temporarily boost this (per canvas)
-        private const double SPEED = -250;        // pixels per second
-        //private const double SPEED = -3000;        // pixels per second
-
-        private const double SCREEN_BOTTOM_MARGIN = 66;
-
-
-
-
-
-
         private const double GAP_PERCENTHEIGHT = 0.333;     // gap between words is height * this percent
+
+        private readonly Settings _settings;
 
         private readonly List<LaneCanvas> _lanes = [];
         private readonly string _unmatched_lane_name = Guid.NewGuid().ToString();
@@ -84,9 +56,11 @@ namespace Core.WordMarquee
 
         #region Constructor
 
-        public WordMarqueeWindow()
+        public WordMarqueeWindow(Settings settings)
         {
             InitializeComponent();
+
+            _settings = settings;
 
             _timer = new DispatcherTimer();
             _timer.Interval = TimeSpan.FromMilliseconds(1);
@@ -114,6 +88,7 @@ namespace Core.WordMarquee
                 {
                     //Background = new SolidColorBrush(backcolor),
                     ClipToBounds = true,
+                    IsHitTestVisible = false,
                 };
                 panel.Children.Insert(insert_index, canvas);
 
@@ -121,13 +96,13 @@ namespace Core.WordMarquee
                 TextBlock textblock = new TextBlock()
                 {
                     Foreground = Brushes.Transparent,
-                    FontSize = FONTSIZE_MAX,
+                    FontSize = _settings.FontSize_Max,
                     Text = "Hello There",
                 };
                 canvas.Children.Add(textblock);
 
-                textblock.Measure(new Size(1000, 1000));
-                double canvas_height = textblock.DesiredSize.Height + VERTICAL_PAD * 2;
+                textblock.Measure(new Size(10000, 10000));
+                double canvas_height = textblock.DesiredSize.Height + _settings.Vertical_Padding * 2;
 
                 canvas.Children.Clear();
 
@@ -251,10 +226,10 @@ namespace Core.WordMarquee
         /// </summary>
         private void MoveWords(LaneCanvas lane, double elapsed_seconds)
         {
-            if (SPEED >= 0)
-                throw new InvalidOperationException($"This function is hardcoded for negative speeds: {SPEED}");
+            if (_settings.Speed >= 0)
+                throw new InvalidOperationException($"This function is hardcoded for negative speeds: {_settings.Speed}");
 
-            double delta = SPEED * Math.Min(0.5, elapsed_seconds);     // capping time in case there's a lag spike
+            double delta = _settings.Speed * Math.Min(0.5, elapsed_seconds);     // capping time in case there's a lag spike
 
             int index = 0;
 
@@ -294,20 +269,22 @@ namespace Core.WordMarquee
                 Fill = lane.Brush,
                 Stroke = new SolidColorBrush(Color.FromArgb(192, 0, 0, 0)),
                 StrokeThickness = 1,
-                FontSize = UtilityMath.GetScaledValue_Capped(FONTSIZE_MIN, FONTSIZE_MAX, 0, 1, word.Probability),
+                FontSize = UtilityMath.GetScaledValue_Capped(_settings.FontSize_Min, _settings.FontSize_Max, 0, 1, word.Probability),
                 //Opacity = GetScaledValue(OPACITY_MIN, OPACITY_MAX, 0, 1, word.Probability),       // can't use semitransparent, since dropshadow effect will darken it
+                IsHitTestVisible = false,
                 Effect = new DropShadowEffect()
                 {
                     Color = Colors.Black,
                     Direction = 0,
                     ShadowDepth = 0,
-                    BlurRadius = UtilityMath.GetScaledValue_Capped(BLUR_MIN, BLUR_MAX, 0, 1, word.Probability),
+                    BlurRadius = UtilityMath.GetScaledValue_Capped(_settings.Blur_Min, _settings.Blur_Max, 0, 1, word.Probability),
                 },
             };
 
             lane.Canvas.Children.Add(textblock);
 
-            textblock.Measure(lane.Canvas.RenderSize);
+            //textblock.Measure(lane.Canvas.RenderSize);        // when fontsize gets huge, long words could exceed screen width.  The under measurment of width would make the move method remove the word early
+            textblock.Measure(new Size(50000, 10000));
             Size size = textblock.DesiredSize;
 
             double x = lane.Canvas.ActualWidth + 10;
@@ -342,7 +319,14 @@ namespace Core.WordMarquee
             Left = screen.Left;
             Width = screen.Width;
 
-            Top = screen.Bottom - ActualHeight - SCREEN_BOTTOM_MARGIN;
+            if (ActualHeight > screen.Height)
+                Top = 0;
+
+            else if (ActualHeight > screen.Height - _settings.Screen_Bottom_Margin)
+                Top = screen.Height / 2 - ActualHeight / 2;     // if the font is that big, just center it
+
+            else
+                Top = screen.Bottom - ActualHeight - _settings.Screen_Bottom_Margin;
         }
 
         /// <summary>

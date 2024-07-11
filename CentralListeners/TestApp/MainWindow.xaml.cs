@@ -32,6 +32,8 @@ namespace TestApp
             _timer_delayed_word = new DispatcherTimer();
             _timer_delayed_word.Interval = TimeSpan.FromMicroseconds(333);
             _timer_delayed_word.Tick += Timer_DelayedWord_Tick;
+
+            SetMarqueeSettings();
         }
 
         private void WordMarquee_AddLane_Click(object sender, RoutedEventArgs e)
@@ -121,6 +123,24 @@ namespace TestApp
             return Enumerable.Range(0, rand.Next(1, 9)).
                 Select(_ => POSSIBLE[rand.Next(POSSIBLE.Length)].ToString()).
                 ToJoin("");
+        }
+
+        private static void SetMarqueeSettings()
+        {
+            WordMarqueeManager.StoreSettings(new Settings()
+            {
+                FontSize_Min = 18,
+                FontSize_Max = 48,
+
+                Blur_Min = 3,
+                Blur_Max = 9,
+
+                Vertical_Padding = 4,
+
+                Speed = -250,
+
+                Screen_Bottom_Margin = 66,
+            });
         }
     }
 }
