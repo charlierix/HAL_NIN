@@ -16,7 +16,7 @@ def mic_to_soundclips(queue_sound, queue_cancel, config, log_folder):
     clip_length = config_audio['clip_length']
     should_log = config['should_log']
 
-    # how does it know that input is mic and not line in?  maybe a default?
+    # this uses default mic input
     audio = pyaudio.PyAudio()
     format = pyaudio.paInt16
     stream = audio.open(format=format, channels=1, rate=rate, input=True, frames_per_buffer=1024)

@@ -7,7 +7,11 @@
         mc:Ignorable="d"
         Title="WordMarqueeWindow" Topmost="True" WindowStyle="None" AllowsTransparency="True" IsHitTestVisible="False" Background="Transparent" SizeToContent="Height" MinHeight="40" Width="800" ShowInTaskbar="False" Loaded="Window_Loaded" SizeChanged="Window_SizeChanged">
 
-    <!-- TODO: setting IsHitTestVisible false at window, stackpanel, canvas, textblock, but mouse is still blocking underlying apps -->
-    <!-- My need to listen for mouse events and somehow not block them -->
-    <StackPanel x:Name="panel" IsHitTestVisible="False"/>
+    <Grid>
+        <!-- TODO: setting IsHitTestVisible false at window, stackpanel, canvas, textblock, but mouse is still blocking underlying apps -->
+        <!-- My need to listen for mouse events and somehow not block them -->
+        <StackPanel x:Name="panel" IsHitTestVisible="False"/>
+
+        <TextBlock Visibility="Collapsed" x:Name="lblReport" Background="Black" Foreground="Lime" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Grid>
 </Window>

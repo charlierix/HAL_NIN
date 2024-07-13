@@ -29,25 +29,27 @@ namespace Core.WordMarquee
 
             public void AdjustSpeed(Settings settings, double elapsed_seconds)
             {
-                const int ZEROTHRESH_MINCOUNT = 1;
+                const int ZEROTHRESH_MINCOUNT = 2;
                 const int ZEROTHRESH_MAXCOUNT = 3;
 
-                const double OVER_SLOPE = -18;     // speed increases by this * count per second (when count > ZEROTHRESH_MAXCOUNT) --- negative because speed is negative (words go from right to left)
-                const double UNDER_SLOPE = 6;
+                // NOTE: it's percent * over|under count.  So over has way more room to increase final percent (it climbs
+                // faster even though the value in the constant is smaller that under's
+                const double OVER_PERCENT = 1;     // speed increase % per second
+                const double UNDER_PERCENT = 3;
 
                 int count = Pending.Count;
 
                 double rate;
                 if (count < ZEROTHRESH_MINCOUNT)
-                    rate = (ZEROTHRESH_MINCOUNT - count) * UNDER_SLOPE;
+                    rate = 1 - (ZEROTHRESH_MINCOUNT - count) * UNDER_PERCENT * elapsed_seconds / 100;
 
                 else if (count > ZEROTHRESH_MAXCOUNT)
-                    rate = (count - ZEROTHRESH_MAXCOUNT) * OVER_SLOPE;
+                    rate = 1 + (count - ZEROTHRESH_MAXCOUNT) * OVER_PERCENT * elapsed_seconds / 100;
 
                 else
                     return;
 
-                CurrentSpeed = Math.Min(settings.Speed, CurrentSpeed + rate * elapsed_seconds);
+                CurrentSpeed = Math.Min(settings.Speed, CurrentSpeed * rate);
             }
         }
 
@@ -223,6 +225,8 @@ namespace Core.WordMarquee
                 foreach (var lane in _lanes)
                     TryRenderNewWord(lane);
 
+                //lblReport.Text = GetReport();
+
                 _prev_tick = now;
             }
             catch (Exception ex)
@@ -377,6 +381,19 @@ namespace Core.WordMarquee
             });
 
             return _lanes.First(o => o.Lane.Name == _unmatched_lane_name);      // should be _lanes[^1], but search just to be safe
+        }
+
+        /// <summary>
+        /// Builds a debug report, useful when tuning values
+        /// </summary>
+        private string GetReport()
+        {
+            StringBuilder retVal = new();
+
+            foreach (var lane in _lanes)
+                retVal.AppendLine($"{lane.Lane.Name}, pending: {lane.Pending.Count}, speed: {lane.CurrentSpeed.ToInt_Round()}");
+
+            return retVal.ToString();
         }
 
         private static bool CanAddWord(LaneCanvas lane)

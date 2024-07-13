@@ -27,7 +27,7 @@ namespace CentralListeners.WebApi.Controllers
 
                     Speed = marquee_options.Value.Speed * scale,
 
-                    Screen_Bottom_Margin = marquee_options.Value.Screen_Bottom_Margin * scale,
+                    Screen_Bottom_Margin = marquee_options.Value.Screen_Bottom_Margin,      // * scale,     // keep this value independent of scale
                 });
 
                 foreach (var marquee in marquee_options.Value.SpeechLanes)
