@@ -1,6 +1,6 @@
-﻿using Game.Core;
-using Game.Math_WPF.Mathematics;
+﻿using Game.Math_WPF.Mathematics;
 using Game.Math_WPF.WPF;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -21,6 +21,34 @@ namespace Core.WordMarquee
             public Canvas Canvas { get; init; }
             public Queue<Word> Pending { get; init; }
             public List<WordShowing> Showing { get; init; }
+
+            /// <summary>
+            /// This keeps increasing when pending list is too large, slowly goes down to baseline when count is zero
+            /// </summary>
+            public double CurrentSpeed { get; set; }
+
+            public void AdjustSpeed(Settings settings, double elapsed_seconds)
+            {
+                const int ZEROTHRESH_MINCOUNT = 1;
+                const int ZEROTHRESH_MAXCOUNT = 3;
+
+                const double OVER_SLOPE = -18;     // speed increases by this * count per second (when count > ZEROTHRESH_MAXCOUNT) --- negative because speed is negative (words go from right to left)
+                const double UNDER_SLOPE = 6;
+
+                int count = Pending.Count;
+
+                double rate;
+                if (count < ZEROTHRESH_MINCOUNT)
+                    rate = (ZEROTHRESH_MINCOUNT - count) * UNDER_SLOPE;
+
+                else if (count > ZEROTHRESH_MAXCOUNT)
+                    rate = (count - ZEROTHRESH_MAXCOUNT) * OVER_SLOPE;
+
+                else
+                    return;
+
+                CurrentSpeed = Math.Min(settings.Speed, CurrentSpeed + rate * elapsed_seconds);
+            }
         }
 
         #endregion
@@ -229,7 +257,10 @@ namespace Core.WordMarquee
             if (_settings.Speed >= 0)
                 throw new InvalidOperationException($"This function is hardcoded for negative speeds: {_settings.Speed}");
 
-            double delta = _settings.Speed * Math.Min(0.5, elapsed_seconds);     // capping time in case there's a lag spike
+            elapsed_seconds = Math.Min(0.5, elapsed_seconds);       // capping time in case there's a lag spike
+
+            lane.AdjustSpeed(_settings, elapsed_seconds);
+            double delta = lane.CurrentSpeed * elapsed_seconds;
 
             int index = 0;
 
