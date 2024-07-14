@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Wait for backspace key
     # NOTE: keyboard relies on root access
     while True:
-        if keyboard.read_key() == 'backspace':
+        if keyboard.read_key() == 'backspace':      # read_key is blocking this process
             print('quitting...')
             queue_cancel.put('stop it')     # aparently, items left in the queue will cause join() to never complete.  So each process will pop one item off the queue
             queue_cancel.put('stop it')
