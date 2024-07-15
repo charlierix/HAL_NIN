@@ -30,6 +30,7 @@ def get_base_folder():
 def on_key_press(event):        # event param is needed to conform to keyboard.on_press interface
     global key_pressed          # referencing the global so that it doesn't set a local variable with the same name
     key_pressed = True
+    keyboard.unhook_all()
 
 # ---------------------------------------------------------------------------------------
 
@@ -77,6 +78,15 @@ def transcribe(clips, base_folder, audio):
         print('transcribing ' + str(span * CLIP_LENGTH) + ' second clips')
 
         transcribe_span(clips, span, base_folder, audio, False)
+
+        # WARNING: execution is sometimes stopping after the first call to transcribe_span.  I've spent several hours
+        # on this, adding print statements all over the place.  I thought maybe keyboard listener, but now I don't
+        # think so
+        #
+        # I'm guessing the whisper model doesn't like that many instances created
+        #
+        # Also seems to be related to how long the recording is.  20 seconds is fine, 40+ has issues
+
         transcribe_span(clips, span, base_folder, audio, True)
 
         if span >= len(clips):
@@ -94,9 +104,7 @@ def transcribe_span(clips, span, base_folder, audio, condition_on_previous_text)
 
     while index <= len(clips):
         clip = extract_clip(clips, index, span)
-
         words = transcribe_clip(clip[0], model, condition_on_previous_text)
-
         write_outputs(folder, words, clip[1], audio, index)
 
         index += span
@@ -120,7 +128,24 @@ def transcribe_clip(clip, model, condition_on_previous_text):
         for word in segment.words:
             retVal.append(TranscribedWord(word.start, word.end, word.probability, word.word))
 
+    retVal = filter_words(retVal)
+
     return retVal
+
+def filter_words(words):
+    # For some reason, every time it gets silence, it halucinates a low probability ' Thank' and high probability ' you.'
+    if len(words) == 2:
+        if words[0].probability < 0.8 and words[1].probability > 0.85:
+            cleaned_0 = to_lower_nopunctuation(words[0].word)
+            cleaned_1 = to_lower_nopunctuation(words[1].word)
+            if cleaned_0 == 'thank' and cleaned_1 == 'you':
+                return []
+        
+    return words
+        
+def to_lower_nopunctuation(input_string):
+    # Convert input text to lowercase and remove whitespace and punctuations
+    return ''.join([char for char in input_string.lower() if char.isalnum()])
 
 def write_outputs(folder, words, clip, audio, index):
     filename_base = folder + '/' + str(index)
@@ -155,18 +180,26 @@ def write_json_file(filename, words):
 # ---------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    base_folder = get_base_folder()
+    try:
+        base_folder = get_base_folder()
 
-    print('Press any key to stop recording...')
-    keyboard.on_press(on_key_press)
+        print('Press any key to stop recording...')
+        print('try to keep it around 20 seconds.  Long recordings have a good chance of the script just stopping silently')
+        # NOTE: this sees any keypress by the os, not just when console has focus
+        keyboard.on_press(on_key_press)
 
-    audio = pyaudio.PyAudio()
+        audio = pyaudio.PyAudio()
 
-    clips = record_sound_clips(audio)
+        clips = record_sound_clips(audio)
 
-    print('Transcribing - clip len: ' + str(len(clips)))
-    transcribe(clips, base_folder, audio)
+        print('Transcribing - clip len: ' + str(len(clips)))
+        transcribe(clips, base_folder, audio)
 
-    audio.terminate()
+        print('after transcribing')
 
-    print('Finished')
+        audio.terminate()
+
+        print('Finished')
+
+    except Exception as e:
+        print(f"An error occurred: {e}")

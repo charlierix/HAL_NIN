@@ -90,7 +90,24 @@ def transcribe_clip(model, clip_time_start, clip_time_stop, clip, language, cond
                 word.probability,
                 word.word))
             
+    retVal = filter_words(retVal)
+
     return retVal
+
+def filter_words(words):
+    # For some reason, every time it gets silence, it halucinates a low probability ' Thank' and high probability ' you.'
+    if len(words) == 2:
+        if words[0].probability < 0.8 and words[1].probability > 0.85:
+            cleaned_0 = to_lower_nopunctuation(words[0].word)
+            cleaned_1 = to_lower_nopunctuation(words[1].word)
+            if cleaned_0 == 'thank' and cleaned_1 == 'you':
+                return []
+        
+    return words
+        
+def to_lower_nopunctuation(input_string):
+    # Convert input text to lowercase and remove whitespace and punctuations
+    return ''.join([char for char in input_string.lower() if char.isalnum()])
 
 def write_log_file(words, log_folder):
     # models.TranscribedWord isn't serializable.  Need to turn each one into a dictionary
