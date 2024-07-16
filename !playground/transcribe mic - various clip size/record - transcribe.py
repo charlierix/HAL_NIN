@@ -1,13 +1,15 @@
 from datetime import datetime, timezone, timedelta
 from faster_whisper import WhisperModel
+import gc
 import json
 import keyboard
 import numpy as np
 import os
 import pyaudio
+import time
 import wave
 
-CLIP_LENGTH = 0.5
+CLIP_LENGTH = 1.25 #0.5
 FORMAT = pyaudio.paInt16
 RATE = 16000
 
@@ -108,6 +110,11 @@ def transcribe_span(clips, span, base_folder, audio, condition_on_previous_text)
         write_outputs(folder, words, clip[1], audio, index)
 
         index += span
+
+    # Trying to keep the script from stopping
+    model = None
+    gc.collect()
+    time.sleep(12)
 
 def extract_clip(clips, index, span):
     data = b''
