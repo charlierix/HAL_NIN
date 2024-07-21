@@ -1,21 +1,45 @@
+import json5        # json5 supports json with comments
 import tkinter as tk
 import pyperclip
+import queue
 import threading
+
+from workers.mic_listener import mic_to_soundclips
+
+# ------------------------------ Init -----------------------------
+
+COMMAND_START = 'start'     # value placed on the queue to the mic listener
+COMMAND_STOP = 'stop'
+
+with open('config.json', 'r') as f:
+    config = json5.load(f)
+
+mic_commands = queue.Queue()
+mic_result = queue.Queue()
+
+# Start the mic listener thread
+threading.Thread(target=mic_to_soundclips, args=(mic_commands, mic_result, COMMAND_START, COMMAND_STOP, config), daemon=True).start()
+
+# ------------------------- Create Window -------------------------
 
 root = tk.Tk()
 root.title('Mic to Text')
 frame = tk.Frame(root)
 textbox = tk.Text(frame)
-checkbox_value = tk.BooleanVar(value=True)
+checkbox_value = tk.BooleanVar(value=config['AutoCopy'])
 checkbox = tk.Checkbutton(frame, text='Auto Copy', variable=checkbox_value)
 record_button = tk.Button(frame, text='Hold to Record')
 copy_button = tk.Button(frame, text='Copy to Clipboard')
 
 def start_recording(event):
     print('start_recording')
+    mic_commands.put(COMMAND_START)
 
 def stop_recording_and_translate(event):
     print('stop_recording_and_translate')
+    mic_commands.put(COMMAND_STOP)
+
+    # TODO: wait for the mic_result queue to be populated, then pop it off and translate the audio
 
     if checkbox_value.get():
         print('also copy to clipboard')

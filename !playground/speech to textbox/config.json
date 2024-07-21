@@ -3,10 +3,7 @@
     {
         // 44100 is a choice for higher quality
         // NOTE: was getting garbage with 44100 - I thought I heard that whisper was trained at 16000
-        "rate": 16000,
-
-        // Sound clip length in seconds
-        "clip_length": 2.5
+        "rate": 16000
     },
 
     "translate":
@@ -42,14 +39,7 @@
         "condition_on_previous_text": false
     },
 
-    // This sends transcribed words to CentralListeners service (http posts)
-    "send_results":
-    {
-        "should_send_marquee": true,
-        "url_marquee": "http://localhost:5030/VisualizeWords",
-        // this needs to match a value in the appsettings.json of CentralListeners service (MarqueeText:SpeechLanes)
-        "sendername_marquee": "microphone"
-    },
-
-    "should_log": false
+    // Value to use in the auto copy checkbox
+    // True copies to clipboard as soon as recording is transcribed
+    "AutoCopy": true
 }
