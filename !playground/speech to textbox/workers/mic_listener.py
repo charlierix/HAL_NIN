@@ -43,7 +43,6 @@ def mic_to_soundclips(queue_commands, queue_result, command_start, command_stop,
                 print(f'ERROR: Unknown command: {command}')
 
         elif recording:
-            print('still recording...')
             clips.append(record_clip(stream, rate, 1))
 
         else:

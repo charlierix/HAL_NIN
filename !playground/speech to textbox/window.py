@@ -3,8 +3,10 @@ import tkinter as tk
 import pyperclip
 import queue
 import threading
+import time
 
 from workers.mic_listener import mic_to_soundclips
+from workers.transcriber import transcribe_soundclip
 
 # ------------------------------ Init -----------------------------
 
@@ -22,31 +24,58 @@ threading.Thread(target=mic_to_soundclips, args=(mic_commands, mic_result, COMMA
 
 # ------------------------- Create Window -------------------------
 
+
+# TODO: put a lot of this in a helper class
+
+
 root = tk.Tk()
 root.title('Mic to Text')
 frame = tk.Frame(root)
+
+
+# TODO: support option for dark mode
+#textbox = tk.Text(frame, bg='#333333', fg='white')
+
 textbox = tk.Text(frame)
+
+
 checkbox_value = tk.BooleanVar(value=config['AutoCopy'])
 checkbox = tk.Checkbutton(frame, text='Auto Copy', variable=checkbox_value)
+
+# TODO: make the record button stand out
+
 record_button = tk.Button(frame, text='Hold to Record')
+
+
 copy_button = tk.Button(frame, text='Copy to Clipboard')
 
 def start_recording(event):
-    print('start_recording')
     mic_commands.put(COMMAND_START)
 
 def stop_recording_and_translate(event):
-    print('stop_recording_and_translate')
     mic_commands.put(COMMAND_STOP)
 
-    # TODO: wait for the mic_result queue to be populated, then pop it off and translate the audio
+    # Wait for the mic_result queue to be populated, then pop it off and translate the audio
+    # NOTE: It would make the UI feel better if the transcription were done in the other thread, but then extra logic
+    # would be needed to ignore button pushes while transcribing, or record again, but the other thread is blocked
+    # from recording, so a different thread would be needed for transcribing.  For now, just block the UI thread until
+    # the transcription finished
+    while True:
+        if mic_result.empty():
+            time.sleep(0.15)
+
+        else:
+            clip = mic_result.get()
+            text = transcribe_soundclip(clip, config)
+            textbox.delete("1.0", "end")
+            textbox.insert("1.0", text)
+            break
 
     if checkbox_value.get():
-        print('also copy to clipboard')
         copy_to_clipboard(event)
 
 def copy_to_clipboard(event):
-    print('copy_to_clipboard')
+    print('Copying to clipboard')
     pyperclip.copy(textbox.get('1.0', tk.END))
 
 # Bind the button press and release events to the start and stop recording functions...
