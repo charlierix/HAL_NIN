@@ -26,7 +26,7 @@
         // https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/tokenizer.py
         //
         // Use "" for auto detect, but that may require 30 seconds of audio to work
-        "language": "en",
+        "language": "en"//,
 
         // condition_on_previous_text: If True, the previous output of the model is provided
         //   as a prompt for the next window; disabling may make the text inconsistent across
@@ -36,7 +36,7 @@
         // this defaults to true, but false seems to give clean results
         //
         // testing showed no difference, might as well keep it false (maybe I'm using it wrong)
-        "condition_on_previous_text": false
+        //"condition_on_previous_text": false
     },
 
     // Value to use in the auto copy checkbox

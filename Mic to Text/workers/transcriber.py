@@ -91,7 +91,6 @@ def transcribe_clip(model, clip_time_start, clip_time_stop, clip, language, cond
                 word.word))
             
     retVal = filter_words(retVal)
-
     return retVal
 
 def filter_words(words):
