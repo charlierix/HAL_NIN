@@ -41,5 +41,8 @@
 
     // Value to use in the auto copy checkbox
     // True copies to clipboard as soon as recording is transcribed
-    "AutoCopy": true
+    "AutoCopy": true,
+    
+    // It's ugly, but at least it's not a flashlight when all the other windows are dark
+    "DarkMode": true
 }

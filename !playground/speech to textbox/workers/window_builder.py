@@ -1,27 +1,34 @@
 import tkinter as tk
 
 def get_window(config):
+    CHECK_TEXT = 'Auto Copy'
+    RECORD_TEXT = 'Hold to Record'
+    COPY_TEXT = 'Copy to Clipboard'
+
     root = tk.Tk()
     root.title('Mic to Text')
     frame = tk.Frame(root)
 
-
-    # TODO: support option for dark mode
-    #textbox = tk.Text(frame, bg='#333333', fg='white')
-
-    textbox = tk.Text(frame)
-
-
+    textbox = None
     checkbox_value = tk.BooleanVar(value=config['AutoCopy'])
-    checkbox = tk.Checkbutton(frame, text='Auto Copy', variable=checkbox_value)
+    checkbox = None
+    record_button = None
+    copy_button = None
 
-    # TODO: make the record button stand out
+    if config['DarkMode']:
+        root.configure(bg='#242424')
+        frame.configure(bg='#242424')
+        textbox = tk.Text(frame, bg='#303030', fg='white')
+        checkbox = tk.Checkbutton(frame, text=CHECK_TEXT, variable=checkbox_value, bg='#242424', fg='#ADB017')       # can't use fg='white' because the little box is white and there doesn't seem to be a way to change it (fg affects text and the checkmark)
+        record_button = tk.Button(frame, text=RECORD_TEXT, bg='#5C5A3F', fg='white')
+        copy_button = tk.Button(frame, text=COPY_TEXT, bg='#555555', fg='white')
 
-    record_button = tk.Button(frame, text='Hold to Record')
-
-
-    copy_button = tk.Button(frame, text='Copy to Clipboard')
-
+    else:
+        textbox = tk.Text(frame)
+        checkbox_value = tk.BooleanVar(value=config['AutoCopy'])
+        checkbox = tk.Checkbutton(frame, text=CHECK_TEXT, variable=checkbox_value)
+        record_button = tk.Button(frame, text=RECORD_TEXT, bg='#F5F3D7')
+        copy_button = tk.Button(frame, text=COPY_TEXT)
 
     # Use grid to manage layout, placing widgets in the same row but different columns...
     frame.grid(column=0, row=0, sticky='nesw', padx=4, pady=4)
