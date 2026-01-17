@@ -1,11 +1,16 @@
-﻿using MAFTesters_Core.Tools;
+﻿using MAFTesters_Core;
+using MAFTesters_Core.Tools;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
 namespace MAFTesters_WPF
 {
+
+    // TODO: make a window that is an interview to help come up a robust prompt for the desired work
+
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -37,6 +42,7 @@ namespace MAFTesters_WPF
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
+
 
                 // Convert the function to a tool
                 var weatherFunction = AIFunctionFactory.Create(WeatherTool.GetWeather);
@@ -79,6 +85,43 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+        private void PythonWriter_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var sessionArgs = GetSessionArgs();
+
+                // Create the agent
+                var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
+
+                // Convert the function into a tool
+                var pythonFunction = AIFunctionFactory.Create(
+                    typeof(PythonWriter).GetMethod(nameof(PythonWriter.GeneratePythonScript)),      // reflection pointing to the function that will get invoked
+                    (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
+                    {
+                        var agents = PythonWriter.CreateAgents(client);
+                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator);
+                    });
+
+
+
+
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private (string url, string model)? GetOllamaValues()
         {
@@ -89,6 +132,19 @@ namespace MAFTesters_WPF
                 return null;
 
             return (txtOllamaURL.Text, model);
+        }
+
+        private SessionArgs GetSessionArgs()
+        {
+            string folder = txtFolder.Text;
+            if (!Directory.Exists(folder))
+                throw new ApplicationException($"Folder doesn't exist: {txtFolder.Text}");
+
+            return new SessionArgs
+            {
+                WorkingFolder = folder,
+                PythonFolder = Path.Combine(folder, "PythonSandbox"),
+            };
         }
     }
 }
