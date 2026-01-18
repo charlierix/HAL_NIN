@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MAFTesters_WPF"
-        Title="Microsoft Agents Tester" Background="{x:Static SystemColors.ControlBrush}" Width="800" Height="600" Loaded="Window_Loaded">
+        Title="Microsoft Agents Tester" ResizeMode="CanResizeWithGrip" Background="{x:Static SystemColors.ControlBrush}" Width="800" Height="600" Loaded="Window_Loaded">
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="1*"/>
@@ -19,10 +19,23 @@
                 <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
-                <Button Content="weather example" Click="WeatherExample_Click"/>
-                <Button Content="python writer" Click="PythonWriter_Click"/>
-            </StackPanel>
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Buttons -->
+                <StackPanel Grid.Row="0">
+                    <Button Content="weather example" Click="WeatherExample_Click"/>
+                    <Button Content="python writer" Click="PythonWriter_Click"/>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2">
+                    <Hyperlink Click="UnitTests_Click">Unit Tests</Hyperlink>
+                </TextBlock>
+            </Grid>
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
@@ -33,9 +46,15 @@
                     <RowDefinition Height="3*"/>
                 </Grid.RowDefinitions>
 
-                <!-- TODO: figure out docker containers, this folder should be inside of that -->
-                <TextBox Grid.Row="0" x:Name="txtFolder" Text="D:\temp\agent tests" ToolTip="any files mentioned in the prompt should be in this folder"/>
+                <!-- Folders -->
+                <StackPanel Grid.Row="0">
+                    <Label Content="File Source Folder"/>
+                    <TextBox x:Name="txtSourceFolder" Text="D:\temp\agent tests\source" ToolTip="any files mentioned in the prompt should be in this folder"/>
+                    <Label Content="Working Folder"/>
+                    <TextBox x:Name="txtWorkingFolder" Text="D:\temp\agent tests\working" ToolTip="intermediate files and final reports will be written to this folder"/>
+                </StackPanel>
 
+                <!-- Prompt -->
                 <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="auto"/>
@@ -43,16 +62,20 @@
                         <ColumnDefinition Width="1*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="Prompt" VerticalAlignment="Center">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" ToolTip="Click link for prompt interviewer window">
                         <TextBlock.LayoutTransform>
                             <RotateTransform Angle="-90"/>
                         </TextBlock.LayoutTransform>
+                        
+                        <Hyperlink Click="PromptInterview_Click">Prompt</Hyperlink>                        
                     </TextBlock>
+                    
                     <TextBox Grid.Column="2" x:Name="txtPrompt" AcceptsReturn="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" ToolTip="prompt should be about kicking off a piece of work, it's not the start of a chat (think in terms of an agile story)"/>
                 </Grid>
 
                 <GridSplitter Grid.Row="3" HorizontalAlignment="Stretch"/>
 
+                <!-- Log -->
                 <Grid Grid.Row="4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="auto"/>
@@ -70,9 +93,9 @@
             </Grid>
         </Grid>
 
+        <!-- Settings -->
         <UniformGrid Grid.Row="2" Columns="2">
             <TextBox x:Name="txtOllamaURL" Text="http://127.0.0.1:11434" ToolTip="ollama url" Margin="0,0,4,0"/>
-            <!--<TextBox x:Name="txtModel" Text="devstral-small-2:24b" Margin="4,0,0,0"/>-->
             <ComboBox x:Name="cboModel">
                 <ComboBox.Items>
                     <ComboBoxItem>ministral-3:8b</ComboBoxItem>

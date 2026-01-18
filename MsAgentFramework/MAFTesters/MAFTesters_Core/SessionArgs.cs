@@ -12,10 +12,11 @@ namespace MAFTesters_Core
         //
         // simple gets can go against public folder, but any python code would run in the sandbox on
         // files that were copied to the sandbox folder
-        //
-        // final generated files could get copied back out to the folder, or expose input and output
-        // folders
 
+        /// <summary>
+        /// Base folder containing files that the job will look at
+        /// </summary>
+        public string SourceFolder { get; set; }
 
         /// <summary>
         /// Where generated files should go

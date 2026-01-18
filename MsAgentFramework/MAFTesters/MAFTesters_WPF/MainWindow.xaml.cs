@@ -8,9 +8,6 @@ using System.Windows.Controls;
 
 namespace MAFTesters_WPF
 {
-
-    // TODO: make a window that is an interview to help come up a robust prompt for the desired work
-
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -123,6 +120,29 @@ namespace MAFTesters_WPF
             }
         }
 
+        private void UnitTests_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                new UnitTestWindow().Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void PromptInterview_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                new PromptInterviewWindow().Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private (string url, string model)? GetOllamaValues()
         {
             var model_item = cboModel.SelectedItem as ComboBoxItem;
@@ -136,14 +156,17 @@ namespace MAFTesters_WPF
 
         private SessionArgs GetSessionArgs()
         {
-            string folder = txtFolder.Text;
-            if (!Directory.Exists(folder))
-                throw new ApplicationException($"Folder doesn't exist: {txtFolder.Text}");
+            if (!Directory.Exists(txtSourceFolder.Text))
+                throw new ApplicationException($"Source folder doesn't exist: {txtSourceFolder.Text}");
+
+            if (!Directory.Exists(txtWorkingFolder.Text))
+                throw new ApplicationException($"Folder doesn't exist: {txtWorkingFolder.Text}");
 
             return new SessionArgs
             {
-                WorkingFolder = folder,
-                PythonFolder = Path.Combine(folder, "PythonSandbox"),
+                SourceFolder = txtSourceFolder.Text,
+                WorkingFolder = txtWorkingFolder.Text,
+                PythonFolder = Path.Combine(txtWorkingFolder.Text, "PythonSandbox"),
             };
         }
     }
