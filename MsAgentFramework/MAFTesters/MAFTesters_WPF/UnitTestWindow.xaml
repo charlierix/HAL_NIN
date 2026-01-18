@@ -6,6 +6,9 @@
         xmlns:local="clr-namespace:MAFTesters_WPF"
         Title="Unit Tests" ResizeMode="CanResizeWithGrip" Background="{x:Static SystemColors.ControlBrush}" Width="800" Height="600">
     <Grid Margin="8">
-        
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Button Content="ensure venv" Click="EnsureVenv_Click"/>
+            <Button Content="pyflakes" Click="PyFlakes_Click"/>
+        </StackPanel>
     </Grid>
 </Window>
