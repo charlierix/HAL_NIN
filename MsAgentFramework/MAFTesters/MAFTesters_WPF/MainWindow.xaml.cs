@@ -1,4 +1,5 @@
 ﻿using MAFTesters_Core;
+using MAFTesters_Core.MSExampleFiles;
 using MAFTesters_Core.Tools;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
@@ -44,10 +45,9 @@ namespace MAFTesters_WPF
                 // Convert the function to a tool
                 var weatherFunction = AIFunctionFactory.Create(WeatherTool.GetWeather);
 
-                // Create the agent
                 var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
 
-
+                // Create the agent
                 // NOTE: it doesn't look like tools can be dynamically added.  if a new tool gets created, a new agent instance would be needed
                 // NOTE: added the line to not make up an answer because it would just return a random temperature if the tool returned a bad response
                 var agent = client.CreateAIAgent(
@@ -95,7 +95,6 @@ namespace MAFTesters_WPF
 
                 var sessionArgs = GetSessionArgs();
 
-                // Create the agent
                 var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
 
                 // Convert the function into a tool
@@ -104,14 +103,158 @@ namespace MAFTesters_WPF
                     (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
                     {
                         var agents = PythonWriter.CreateAgents(client);
-                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator);
+                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator, true);
                     });
 
 
+                // let's see what the agents see
+                string name = pythonFunction.Name;      // this is the function name: GeneratePythonScript
+                string description = pythonFunction.Description;        // this is the contents of the description attribute over the function [Description(...)]
+                var schema = pythonFunction.JsonSchema;
+                var return_schema = pythonFunction.ReturnJsonSchema;
 
 
+                // Invoke the tool directly to test it
+                var tool_args = new AIFunctionArguments();
+                tool_args.Add("desiredFilename", $"{DateTime.Now:yyyyMMdd HHmmss} writer test.py");
+                tool_args.Add("requirements", "What is the 32nd number in the fibonacci sequence?");
+
+                var result = pythonFunction.InvokeAsync(tool_args);
+
+                var temp = result.Result;
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void PythonWriter2_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var sessionArgs = GetSessionArgs();
+
+                var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
+
+                // Convert the function into a tool
+                var pythonFunction = AIFunctionFactory.Create(
+                    typeof(PythonWriter).GetMethod(nameof(PythonWriter.GeneratePythonScript)),      // reflection pointing to the function that will get invoked
+                    (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
+                    {
+                        var agents = PythonWriter.CreateAgents(client);
+                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator, true);
+                    });
 
 
+                // let's see what the agents see
+                string name = pythonFunction.Name;      // this is the function name: GeneratePythonScript
+                string description = pythonFunction.Description;        // this is the contents of the description attribute over the function [Description(...)]
+                var schema = pythonFunction.JsonSchema;
+                var return_schema = pythonFunction.ReturnJsonSchema;
+
+
+                // Invoke the tool directly to test it
+                var tool_args = new AIFunctionArguments();
+                tool_args.Add("desiredFilename", $"{DateTime.Now:yyyyMMdd HHmmss} writer test.py");
+                tool_args.Add("requirements", "What is the 32nd number in the fibonacci sequence?");
+
+                var result = pythonFunction.InvokeAsync(tool_args);
+
+                var temp = result.Result;
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void ExecutorsAndEdges_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string report = await ExecutorsAndEdges.RunAsync();
+
+                txtLog.Text = report;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/03_AgentsInWorkflows
+        private void AgentsInWorkflows_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/04_AgentWorkflowPatterns
+        private void AgentWorkflowPatterns_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/06_SubWorkflows
+        private void SubWorkflows_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/07_MixedWorkflowAgentsAndExecutors
+        private void MixedWorkflowAgentsAndExecutors_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Agents/Agent_Step12_AsFunctionTool
+        private void AsFunctionTool_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/Agents/WorkflowAsAnAgent
+        private void WorkflowAsAnAgent_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
 
             }
             catch (Exception ex)

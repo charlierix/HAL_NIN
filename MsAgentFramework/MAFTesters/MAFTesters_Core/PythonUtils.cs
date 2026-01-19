@@ -129,6 +129,20 @@ namespace MAFTesters_Core
             if (string.IsNullOrEmpty(exception))
                 return;
 
+            // throw out lines that start with "[notice] "
+            string[] lines = exception.
+                Replace("\r\n", "\n").
+                Replace("\r", "\n").
+                Split('\n', StringSplitOptions.RemoveEmptyEntries).
+                Select(o => o.Trim()).
+                Where(o => !o.StartsWith("[notice] ", StringComparison.OrdinalIgnoreCase)).
+                ToArray();
+
+            if (lines.Length == 0)
+                return;
+
+            exception = string.Join('\n', lines);
+
             throw new ApplicationException($"{message}:{Environment.NewLine}{process.StartInfo.FileName} {process.StartInfo.ArgumentList}{Environment.NewLine}{exception}");
         }
     }
