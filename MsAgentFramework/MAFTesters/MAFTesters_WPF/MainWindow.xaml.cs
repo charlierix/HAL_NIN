@@ -181,7 +181,11 @@ namespace MAFTesters_WPF
         {
             try
             {
-                string report = await ExecutorsAndEdges.RunAsync();
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                string report = await ExecutorsAndEdges.RunAsync(text);
 
                 txtLog.Text = report;
             }
@@ -190,12 +194,25 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/03_AgentsInWorkflows
-        private void AgentsInWorkflows_Click(object sender, RoutedEventArgs e)
+        private async void AgentsInWorkflows_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                //string report = await AgentsInWorkflows.RunAsync_Stream(settings.Value.url, settings.Value.model, text);
+                string report = await AgentsInWorkflows.RunAsync_Run(settings.Value.url, settings.Value.model, text);
+
+                txtLog.Text = report;
             }
             catch (Exception ex)
             {

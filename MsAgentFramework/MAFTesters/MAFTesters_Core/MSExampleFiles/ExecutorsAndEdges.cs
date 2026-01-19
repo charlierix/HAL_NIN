@@ -1,6 +1,4 @@
 ﻿using Microsoft.Agents.AI.Workflows;
-using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace MAFTesters_Core.MSExampleFiles
@@ -20,7 +18,7 @@ namespace MAFTesters_Core.MSExampleFiles
     /// </summary>
     public static class ExecutorsAndEdges
     {
-        public static async Task<string> RunAsync()
+        public static async Task<string> RunAsync(string text)
         {
             // Create the executors
             Func<string, string> uppercaseFunc = s => s.ToUpperInvariant();
@@ -30,30 +28,60 @@ namespace MAFTesters_Core.MSExampleFiles
 
             // Build the workflow by connecting executors sequentially
             WorkflowBuilder builder = new(uppercase);
-            builder.AddEdge(uppercase, reverse).WithOutputFrom(reverse);
+            builder.AddEdge(uppercase, reverse).
+                WithOutputFrom(reverse);
             var workflow = builder.Build();
 
             // Execute the workflow with input data
-            await using Run run = await InProcessExecution.RunAsync(workflow, "Hello, World!");
+            await using Run run = await InProcessExecution.RunAsync(workflow, text);
 
             var full_log = new StringBuilder();
             var end_results = new StringBuilder();
+            var end_results2 = new StringBuilder();
+
+            /* https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/events?pivots=programming-language-csharp
+
+            // Workflow lifecycle events
+            WorkflowStartedEvent     // Workflow execution begins
+            WorkflowOutputEvent      // Workflow outputs data
+            WorkflowErrorEvent       // Workflow encounters an error
+            WorkflowWarningEvent     // Workflow encountered a warning
+
+            // Executor events
+            ExecutorInvokedEvent     // Executor starts processing
+            ExecutorCompletedEvent   // Executor finishes processing
+            ExecutorFailedEvent      // Executor encounters an error
+            AgentResponseEvent       // An agent run produces output
+            AgentResponseUpdateEvent // An agent run produces a streaming update
+
+            // Superstep events
+            SuperStepStartedEvent    // Superstep begins
+            SuperStepCompletedEvent  // Superstep completes
+
+            // Request events
+            RequestInfoEvent         // A request is issued
+
+            */
 
             foreach (WorkflowEvent evt in run.NewEvents)
             {
-
                 full_log.AppendLine(evt.ToString());
-
 
                 if (evt is ExecutorCompletedEvent executorComplete)
                     end_results.AppendLine($"{executorComplete.ExecutorId}: {executorComplete.Data}");
+
+                if (evt is WorkflowOutputEvent outputEvent)
+                    end_results2.AppendLine($"{outputEvent.Data}");
             }
 
             var retVal = new StringBuilder();
             retVal.AppendLine("Chains two workers (executors) together (along an edge).  Stored and run in a workflow");
             retVal.AppendLine();
-            retVal.AppendLine("--- RESULTS ---");
+            retVal.AppendLine("--- RESULTS 1 ---");
             retVal.AppendLine(end_results.ToString());
+            retVal.AppendLine();
+            retVal.AppendLine("--- RESULTS 2 ---");
+            retVal.AppendLine(end_results2.ToString());
             retVal.AppendLine();
             retVal.AppendLine("--- FULL LOG ---");
             retVal.AppendLine(full_log.ToString());
