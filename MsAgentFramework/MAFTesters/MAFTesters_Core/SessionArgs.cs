@@ -32,5 +32,19 @@ namespace MAFTesters_Core
         public string PythonFolder { get; init; }
 
         // maybe a max text size that should be sent to an llm.  if a file is too large, the llm should recurse or be fed chunks
+
+
+
+        // TODO: expose two event pipes:
+        //  - one is a direct copy of all WorkflowEvent from all workflows
+        //  - one is a filtered version of the above with an enum, something like { StartingTool, StartingSub, FinishedTool, FinishedSub, Intermediate }
+        //      Starting will have data that was passed to the item
+        //      Finished will have data returned from the item
+
+
+        // TODO: add memory of previous calls, maybe a few different levels of detail (full, and a couple types of summaries)
+
+
+
     }
 }

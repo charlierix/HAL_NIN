@@ -4,8 +4,10 @@ using MAFTesters_Core.Tools;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using static MAFTesters_Core.MSExampleFiles.AgentWorkflowPatterns;
 
 namespace MAFTesters_WPF
 {
@@ -189,7 +191,7 @@ namespace MAFTesters_WPF
 
                 txtLog.Text = report;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -219,12 +221,77 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/04_AgentWorkflowPatterns
-        private void AgentWorkflowPatterns_Click(object sender, RoutedEventArgs e)
+        private async void AgentWorkflowPatterns_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var results = new List<(WorkflowType flow_type, string report)>();
+
+                foreach (var flow_type in Enum.GetValues<WorkflowType>())
+                {
+                    results.Add((flow_type, await AgentWorkflowPatterns.RunAsync(settings.Value.url, settings.Value.model, flow_type, text)));
+                    //break;
+                }
+
+                var report = new StringBuilder();
+
+                report.AppendLine("Demonstrates different ways of chaining agents together.  This tester creates a few agents, each translates to the language they are set up for");
+
+                bool is_first = true;
+                foreach (var result in results)
+                {
+                    if (!is_first)
+                    {
+                        report.AppendLine();
+                        report.AppendLine();
+                        report.AppendLine();
+                    }
+                    is_first = false;
+
+                    report.AppendLine($"---------------------- {result.flow_type} ----------------------");
+
+                    switch (result.flow_type)
+                    {
+                        case WorkflowType.sequential:
+                            report.AppendLine("A pipeline of agents where the output of one agent is the input to the next");
+                            break;
+
+                        case WorkflowType.concurrent:
+                            report.AppendLine("agents operate concurrently on the same input, aggregating their outputs into a single collection");
+                            break;
+
+                        case WorkflowType.handoffs:
+                            report.AppendLine("Handoffs between agents are achieved by the current agent invoking an AITool provided to an agent");
+                            report.AppendLine("through ChatClientAgentOptions.  The AIAgent must be capable of understanding those AgentRunOptions provided. If the");
+                            report.AppendLine("agent ignores the tools or is otherwise unable to advertize them to the underlying provider, handoffs will not occur");
+                            break;
+
+                        case WorkflowType.groupchat:
+                            report.AppendLine("Creates a GroupChatManager.  The manager is provided with a set of agents that will participate in the group chat");
+                            report.AppendLine("");
+                            report.AppendLine("Handoffs between agents are achieved by the current agent invoking an AITool provided to an agent through");
+                            report.AppendLine("ChatClientAgentOptions.  The AIAgent must be capable of understanding those AgentRunOptions provided. If the agent");
+                            report.AppendLine("ignores the tools or is otherwise unable to advertize them to the underlying provider, handoffs will not occur");
+                            break;
+                    }
+
+                    report.AppendLine();
+
+                    report.AppendLine(result.report);
+                }
+
+                txtLog.Text = report.ToString();
             }
             catch (Exception ex)
             {
