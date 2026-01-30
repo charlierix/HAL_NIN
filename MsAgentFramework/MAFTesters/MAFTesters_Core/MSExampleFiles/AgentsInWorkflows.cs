@@ -201,6 +201,33 @@ namespace MAFTesters_Core.MSExampleFiles
             return retVal.ToString();
         }
 
+        public static async Task<WorkflowEventListener_Response> Run2Async_Stream(string ollama_url, string ollama_model, string text)
+        {
+            //// Set up the Azure OpenAI client
+            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
+            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
+            //var chatClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
+
+            // Using ollama
+            var client = new OllamaApiClient(ollama_url, ollama_model);
+
+            // Create agents
+            AIAgent frenchAgent = GetTranslationAgent("French", client);
+            AIAgent spanishAgent = GetTranslationAgent("Spanish", client);
+            AIAgent englishAgent = GetTranslationAgent("English", client);
+
+            // Build the workflow by adding executors and connecting them
+            var workflow = new WorkflowBuilder(frenchAgent)
+                .AddEdge(frenchAgent, spanishAgent)
+                .AddEdge(spanishAgent, englishAgent)
+                .Build();
+
+            // Execute the workflow
+            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, text));
+
+            return await WorkflowEventListener.ListenToStream(run);
+        }
+
         /// <summary>
         /// Creates a translation agent for the specified target language.
         /// </summary>

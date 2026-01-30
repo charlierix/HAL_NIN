@@ -2,7 +2,6 @@
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 
@@ -98,6 +97,99 @@ namespace MAFTesters_Core.MSExampleFiles
 
             return retVal.log;
         }
+        public async static Task<WorkflowEventListener_Response> Run2Async(string ollama_url, string ollama_model, WorkflowType workflow_type, string text)
+        {
+            //// Set up the Azure OpenAI client.
+            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
+            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
+            //var client = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
+
+            // Using ollama
+            var client = new OllamaApiClient(ollama_url, ollama_model);
+
+            WorkflowEventListener_Response retVal = null;
+
+            switch (workflow_type)
+            {
+                case WorkflowType.sequential:
+                    await using (StreamingRun run1 = await InProcessExecution.StreamAsync(
+                        AgentWorkflowBuilder.BuildSequential(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client))),
+                        new List<ChatMessage>([new(ChatRole.User, text)])))
+                    {
+                        retVal = await WorkflowEventListener.ListenToStream(run1);
+                    }
+                    break;
+
+                case WorkflowType.concurrent:
+                    await using (StreamingRun run2 = await InProcessExecution.StreamAsync(
+                        AgentWorkflowBuilder.BuildConcurrent(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client))),
+                        new List<ChatMessage>([new(ChatRole.User, text)])))
+                    {
+                        retVal = await WorkflowEventListener.ListenToStream(run2);
+                    }
+                    break;
+
+                case WorkflowType.handoffs:
+                    ChatClientAgent historyTutor = new(client,
+                        "You provide assistance with historical queries. Explain important events and context clearly. Only respond about history.",
+                        "history_tutor",
+                        "Specialist agent for historical questions");
+
+                    ChatClientAgent mathTutor = new(client,
+                        "You provide help with math problems. Explain your reasoning at each step and include examples. Only respond about math.",
+                        "math_tutor",
+                        "Specialist agent for math questions");
+
+                    ChatClientAgent triageAgent = new(client,
+                        "You determine which agent to use based on the user's homework question. ALWAYS handoff to another agent.",
+                        "triage_agent",
+                        "Routes messages to the appropriate specialist agent");
+
+                    var workflow = AgentWorkflowBuilder.CreateHandoffBuilderWith(triageAgent)
+                        .WithHandoffs(triageAgent, [mathTutor, historyTutor])
+                        .WithHandoffs([mathTutor, historyTutor], triageAgent)
+                        .Build();
+
+                    List<ChatMessage> messages = [];
+                    //while (true)        // infinite loop, not sure what they wanted to do here.  looking at history, it's always been an infinite loop
+                    for (int i = 0; i < 3; i++)
+                    {
+                        messages.Add(new(ChatRole.User, text));
+
+                        await using StreamingRun run3 = await InProcessExecution.StreamAsync(workflow, messages);
+                        var temp = await WorkflowEventListener.ListenToStream(run3);
+
+                        messages.AddRange(temp.Messages_Final ?? []);
+
+                        if (i == 0)
+                            retVal = temp;
+                        else
+                            retVal = retVal with
+                            {
+                                LogReport = $"{retVal.LogReport}{Environment.NewLine}-------- iteration {i} --------{Environment.NewLine}{temp.LogReport}",
+                                Messages_Building = retVal.Messages_Building.Concat(temp.Messages_Building).ToArray(),
+                                Messages_Final = retVal.Messages_Final.Concat(temp.Messages_Final).ToArray(),
+                            };
+                    }
+                    break;
+
+                case WorkflowType.groupchat:
+                    await using (StreamingRun run4 = await InProcessExecution.StreamAsync(
+                        AgentWorkflowBuilder.CreateGroupChatBuilderWith(agents => new RoundRobinGroupChatManager(agents) { MaximumIterationCount = 5 })
+                            .AddParticipants(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client)))
+                            .Build(),
+                        new List<ChatMessage>([new(ChatRole.User, text)])))
+                    {
+                        retVal = await WorkflowEventListener.ListenToStream(run4);
+                    }
+                    break;
+
+                default:
+                    throw new InvalidOperationException("Invalid workflow type.");
+            }
+
+            return retVal;
+        }
 
         private static async Task<(string log, ChatMessage[] responses)> RunWorkflowAsync(Workflow workflow, List<ChatMessage> messages)
         {
@@ -170,7 +262,7 @@ namespace MAFTesters_Core.MSExampleFiles
             var retVal = new StringBuilder();
 
 
-            // TODO: add description of what this is doing
+            // NOTE: description of what this is doing is added in the code that calls this class (the button click)
 
             retVal.AppendLine("--- RESULTS ---");
             retVal.AppendLine(end_results.ToString());

@@ -298,6 +298,118 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private async void ExecutorsAndEdges2_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var report = await ExecutorsAndEdges.Run2Async(text);
+
+                txtLog.Text = BuildReport(report);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void AgentsInWorkflows2_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var report = await AgentsInWorkflows.Run2Async_Stream(settings.Value.url, settings.Value.model, text);
+
+                txtLog.Text = BuildReport(report);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void AgentWorkflowPatterns2_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var results = new List<(WorkflowType flow_type, WorkflowEventListener_Response report)>();
+
+                foreach (var flow_type in Enum.GetValues<WorkflowType>())
+                    results.Add((flow_type, await AgentWorkflowPatterns.Run2Async(settings.Value.url, settings.Value.model, flow_type, text)));
+
+                var report = new StringBuilder();
+
+                report.AppendLine("Demonstrates different ways of chaining agents together.  This tester creates a few agents, each translates to the language they are set up for");
+
+                foreach (var result in results)
+                {
+                    report.AppendLine();
+                    report.AppendLine();
+                    report.AppendLine();
+
+                    report.AppendLine($"---------------------- {result.flow_type} ----------------------");
+
+                    switch (result.flow_type)
+                    {
+                        case WorkflowType.sequential:
+                            report.AppendLine("A pipeline of agents where the output of one agent is the input to the next");
+                            break;
+
+                        case WorkflowType.concurrent:
+                            report.AppendLine("agents operate concurrently on the same input, aggregating their outputs into a single collection");
+                            break;
+
+                        case WorkflowType.handoffs:
+                            report.AppendLine("Handoffs between agents are achieved by the current agent invoking an AITool provided to an agent");
+                            report.AppendLine("through ChatClientAgentOptions.  The AIAgent must be capable of understanding those AgentRunOptions provided. If the");
+                            report.AppendLine("agent ignores the tools or is otherwise unable to advertize them to the underlying provider, handoffs will not occur");
+                            break;
+
+                        case WorkflowType.groupchat:
+                            report.AppendLine("Creates a GroupChatManager.  The manager is provided with a set of agents that will participate in the group chat");
+                            report.AppendLine("");
+                            report.AppendLine("Handoffs between agents are achieved by the current agent invoking an AITool provided to an agent through");
+                            report.AppendLine("ChatClientAgentOptions.  The AIAgent must be capable of understanding those AgentRunOptions provided. If the agent");
+                            report.AppendLine("ignores the tools or is otherwise unable to advertize them to the underlying provider, handoffs will not occur");
+                            break;
+                    }
+
+                    report.AppendLine();
+
+                    report.AppendLine(BuildReport(result.report));
+                }
+
+                txtLog.Text = report.ToString();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/06_SubWorkflows
         private void SubWorkflows_Click(object sender, RoutedEventArgs e)
         {
@@ -395,6 +507,31 @@ namespace MAFTesters_WPF
                 WorkingFolder = txtWorkingFolder.Text,
                 PythonFolder = Path.Combine(txtWorkingFolder.Text, "PythonSandbox"),
             };
+        }
+
+        private static string BuildReport(WorkflowEventListener_Response response)
+        {
+            var retVal = new StringBuilder();
+
+            retVal.AppendLine("------------ FINAL ------------");
+
+            foreach (var message in response.Messages_Final)
+                retVal.AppendLine($"{message.AuthorName} {message.MessageId} ({message.Role}): {message.Text}");
+
+            retVal.AppendLine();
+            retVal.AppendLine();
+            retVal.AppendLine("------------ BUILDING ------------");
+
+            foreach (var message in response.Messages_Building)
+                retVal.AppendLine($"{message.AuthorName} {message.MessageId} ({message.Role}): {message.Text}");
+
+            retVal.AppendLine();
+            retVal.AppendLine();
+            retVal.AppendLine("------------ LOG ------------");
+            retVal.AppendLine();
+            retVal.AppendLine(response.LogReport);
+
+            return retVal.ToString();
         }
     }
 }

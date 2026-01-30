@@ -88,6 +88,27 @@ namespace MAFTesters_Core.MSExampleFiles
 
             return retVal.ToString();
         }
+        public static async Task<WorkflowEventListener_Response> Run2Async(string text)
+        {
+            // Create the executors
+            Func<string, string> uppercaseFunc = s => s.ToUpperInvariant();
+            var uppercase = uppercaseFunc.BindAsExecutor("UppercaseExecutor");
+
+            ReverseTextExecutor reverse = new();
+
+            // Build the workflow by connecting executors sequentially
+            WorkflowBuilder builder = new(uppercase);
+            builder.AddEdge(uppercase, reverse).
+                WithOutputFrom(reverse);
+            var workflow = builder.Build();
+
+            // Execute the workflow with input data
+            await using var run = await InProcessExecution.StreamAsync(workflow, text);
+
+            var retVal = await WorkflowEventListener.ListenToStream(run);
+
+            return retVal;
+        }
 
         /// <summary>
         /// Second executor: reverses the input text and completes the workflow.

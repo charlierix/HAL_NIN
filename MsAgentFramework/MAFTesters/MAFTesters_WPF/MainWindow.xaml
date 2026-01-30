@@ -35,10 +35,23 @@
 
                         <Expander Header="MS Examples" Margin="0,8,0,0" IsExpanded="True">
                             <StackPanel>
-                                <Button Content="executors and edges" Click="ExecutorsAndEdges_Click"/>
-                                <Button Content="agents in workflows" Click="AgentsInWorkflows_Click"/>
-                                <Button Content="agent workflow patterns" Click="AgentWorkflowPatterns_Click"/>
-                                <Button Content="sub workflows" Click="SubWorkflows_Click"/>
+                                <StackPanel>
+                                    <StackPanel.LayoutTransform>
+                                        <ScaleTransform ScaleX="0.667" ScaleY="0.667"/>
+                                    </StackPanel.LayoutTransform>
+
+                                    <Label Content="original code"/>
+                                    <Button Content="executors and edges" Click="ExecutorsAndEdges_Click"/>
+                                    <Button Content="agents in workflows" Click="AgentsInWorkflows_Click"/>
+                                    <Button Content="agent workflow patterns" Click="AgentWorkflowPatterns_Click"/>
+                                </StackPanel>
+
+                                <Label Content="reworked listener" Margin="0,8,0,0"/>
+                                <Button Content="executors and edges" Click="ExecutorsAndEdges2_Click"/>
+                                <Button Content="agents in workflows" Click="AgentsInWorkflows2_Click"/>
+                                <Button Content="agent workflow patterns" Click="AgentWorkflowPatterns2_Click"/>
+
+                                <Button Content="sub workflows" Margin="0,12,0,0" Click="SubWorkflows_Click"/>
                                 <Button Content="mixed workflow agents and executors" Click="MixedWorkflowAgentsAndExecutors_Click"/>
 
                                 <Button Content="as function tool" Margin="0,8,0,0" Click="AsFunctionTool_Click"/>
