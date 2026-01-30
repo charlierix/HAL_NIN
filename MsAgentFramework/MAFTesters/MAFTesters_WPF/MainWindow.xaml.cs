@@ -309,7 +309,9 @@ namespace MAFTesters_WPF
 
                 var report = await ExecutorsAndEdges.Run2Async(text);
 
-                txtLog.Text = BuildReport(report);
+                string description = "Chains two workers (executors) together (along an edge).  Stored and run in a workflow";
+
+                txtLog.Text = BuildReport(description, report);
             }
             catch (Exception ex)
             {
@@ -333,7 +335,13 @@ namespace MAFTesters_WPF
 
                 var report = await AgentsInWorkflows.Run2Async_Stream(settings.Value.url, settings.Value.model, text);
 
-                txtLog.Text = BuildReport(report);
+                var description = new StringBuilder();
+                description.AppendLine("Chains three agents together in a workflow:");
+                description.AppendLine("agent_to_french");
+                description.AppendLine("Edge(agent_to_french, agent_to_spanish)");
+                description.AppendLine("Edge(agent_to_spanish, agent_to_english)");
+
+                txtLog.Text = BuildReport(description.ToString(), report);
             }
             catch (Exception ex)
             {
@@ -399,7 +407,7 @@ namespace MAFTesters_WPF
 
                     report.AppendLine();
 
-                    report.AppendLine(BuildReport(result.report));
+                    report.AppendLine(BuildReport("", result.report));
                 }
 
                 txtLog.Text = report.ToString();
@@ -409,19 +417,34 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/06_SubWorkflows
-        private void SubWorkflows_Click(object sender, RoutedEventArgs e)
+        private async void SubWorkflows_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var report = await SubWorkflows.RunAsync(settings.Value.url, settings.Value.model, text);
+
+                //var description = new StringBuilder();
+                //txtLog.Text = BuildReport(description.ToString(), report);
+
+                txtLog.Text = report;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/07_MixedWorkflowAgentsAndExecutors
         private void MixedWorkflowAgentsAndExecutors_Click(object sender, RoutedEventArgs e)
         {
@@ -509,9 +532,13 @@ namespace MAFTesters_WPF
             };
         }
 
-        private static string BuildReport(WorkflowEventListener_Response response)
+        private static string BuildReport(string description, WorkflowEventListener_Response response)
         {
             var retVal = new StringBuilder();
+
+            retVal.AppendLine(description);
+            retVal.AppendLine();
+            retVal.AppendLine();
 
             retVal.AppendLine("------------ FINAL ------------");
 
