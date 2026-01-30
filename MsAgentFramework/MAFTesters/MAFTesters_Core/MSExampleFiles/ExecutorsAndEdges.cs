@@ -99,7 +99,7 @@ namespace MAFTesters_Core.MSExampleFiles
             // Build the workflow by connecting executors sequentially
             WorkflowBuilder builder = new(uppercase);
             builder.AddEdge(uppercase, reverse).
-                WithOutputFrom(reverse);
+                WithOutputFrom(reverse);        // NOTE: this WithOutputFrom is what populates WorkflowOutputEvent
             var workflow = builder.Build();
 
             // Execute the workflow with input data

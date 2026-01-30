@@ -60,7 +60,7 @@ namespace MAFTesters_Core.MSExampleFiles
             var mainWorkflow = new WorkflowBuilder(prefix)
                 .AddEdge(prefix, subWorkflowExecutor)
                 .AddEdge(subWorkflowExecutor, postProcess)
-                .WithOutputFrom(postProcess)
+                .WithOutputFrom(postProcess)        // NOTE: this WithOutputFrom is what populates WorkflowOutputEvent
                 .Build();
 
             // Step 4: Execute the main workflow
@@ -100,6 +100,55 @@ namespace MAFTesters_Core.MSExampleFiles
             console.AppendLine("✅ Sample Complete: Workflows can be composed hierarchically using sub-workflows\n");
 
             return console.ToString();
+        }
+        public static async Task<WorkflowEventListener_Response> Run2Async(string ollama_url, string ollama_model, string text)
+        {
+            var console = new StringBuilder();
+
+            console.AppendLine();
+            console.AppendLine("=== Sub-Workflow Demonstration ===");
+            console.AppendLine();
+
+            // Step 1: Build a simple text processing sub-workflow
+            console.AppendLine("Building sub-workflow: Uppercase → Reverse → Append Suffix...");
+            console.AppendLine();
+
+            UppercaseExecutor uppercase = new();
+            ReverseExecutor reverse = new();
+            AppendSuffixExecutor append = new(" [PROCESSED]");
+
+            var subWorkflow = new WorkflowBuilder(uppercase)
+                .AddEdge(uppercase, reverse)
+                .AddEdge(reverse, append)
+                .WithOutputFrom(append)
+                .Build();
+
+            // Step 2: Configure the sub-workflow as an executor for use in the parent workflow
+            ExecutorBinding subWorkflowExecutor = subWorkflow.BindAsExecutor("TextProcessingSubWorkflow");
+
+            // Step 3: Build a main workflow that uses the sub-workflow as an executor
+            console.AppendLine("Building main workflow that uses the sub-workflow as an executor...");
+            console.AppendLine();
+
+            PrefixExecutor prefix = new("INPUT: ");
+            PostProcessExecutor postProcess = new();
+
+            var mainWorkflow = new WorkflowBuilder(prefix)
+                .AddEdge(prefix, subWorkflowExecutor)
+                .AddEdge(subWorkflowExecutor, postProcess)
+                .WithOutputFrom(postProcess)        // NOTE: this WithOutputFrom is what populates WorkflowOutputEvent
+                .Build();
+
+            // Step 4: Execute the main workflow
+            console.AppendLine($"Executing main workflow with input: '{text}'");
+            console.AppendLine();
+
+            //await using Run run = await InProcessExecution.RunAsync(mainWorkflow, text);
+            await using var run = await InProcessExecution.StreamAsync(mainWorkflow, text);
+
+            var retVal = await WorkflowEventListener.ListenToStream(run);
+
+            return retVal;
         }
 
         // ====================================

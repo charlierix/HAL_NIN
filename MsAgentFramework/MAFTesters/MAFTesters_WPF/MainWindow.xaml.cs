@@ -298,6 +298,33 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+        private async void SubWorkflows_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "Hello, World!" :
+                    txtPrompt.Text;
+
+                var report = await SubWorkflows.RunAsync(settings.Value.url, settings.Value.model, text);
+
+                //var description = new StringBuilder();
+                //txtLog.Text = BuildReport(description.ToString(), report);
+
+                txtLog.Text = report;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private async void ExecutorsAndEdges2_Click(object sender, RoutedEventArgs e)
         {
@@ -417,7 +444,7 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private async void SubWorkflows_Click(object sender, RoutedEventArgs e)
+        private async void SubWorkflows2_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -432,12 +459,13 @@ namespace MAFTesters_WPF
                     "Hello, World!" :
                     txtPrompt.Text;
 
-                var report = await SubWorkflows.RunAsync(settings.Value.url, settings.Value.model, text);
+                var report = await SubWorkflows.Run2Async(settings.Value.url, settings.Value.model, text);
 
-                //var description = new StringBuilder();
-                //txtLog.Text = BuildReport(description.ToString(), report);
+                var description = new StringBuilder();
+                description.AppendLine("This has a main workflow with edges that add a prefix, call a sub workflow, and a post process that adds a bunch of final text");
+                description.AppendLine("The subworkflow has edges for uppercase, reverse, suffix text");
 
-                txtLog.Text = report;
+                txtLog.Text = BuildReport(description.ToString(), report);
             }
             catch (Exception ex)
             {
