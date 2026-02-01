@@ -472,19 +472,62 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/07_MixedWorkflowAgentsAndExecutors
-        private void MixedWorkflowAgentsAndExecutors_Click(object sender, RoutedEventArgs e)
+        private async void MixedWorkflowAgentsAndExecutors_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                var settings = GetOllamaValues();
+                if (settings == null)
+                {
+                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
+                //string text = txtPrompt.Text.Trim() == "" ?
+                //    "Hello, World!" :
+                //    txtPrompt.Text;
+
+                string text = null;     // there's logic in the run to use its own prompt when null
+
+                var results = await MixedWorkflowWithAgentsAndExecutors.RunAsync(settings.Value.url, settings.Value.model, text);
+
+                var report = new StringBuilder();
+
+                for (int i = 0; i < results.calls.Length; i++)
+                {
+                    string description = "";
+                    if (i == 0)
+                        description =
+@"This demonstrates how to chain executors with agents
+
+Standard executors take and return basic datatypes (like string), agents use ChatMessage
+
+This tester sets up both with type transformers in between
+
+The tester itself tells an agent to detect prompt injection with instruction on how to output";
+
+                    description += $"{Environment.NewLine}{Environment.NewLine}prompt: {results.calls[i].prompt}{Environment.NewLine}{Environment.NewLine}";
+
+                    report.AppendLine(BuildReport(description, results.calls[i].response));
+                }
+
+                report.AppendLine();
+                report.AppendLine();
+                report.AppendLine("************************************************");
+                report.AppendLine("              Log of all calls");
+                report.AppendLine("************************************************");
+                report.AppendLine();
+                report.AppendLine();
+                report.AppendLine(results.log);
+
+                txtLog.Text = report.ToString();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Agents/Agent_Step12_AsFunctionTool
         private void AsFunctionTool_Click(object sender, RoutedEventArgs e)
         {
