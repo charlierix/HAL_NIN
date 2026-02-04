@@ -20,15 +20,9 @@ namespace MAFTesters_Core.MSExampleFiles
             groupchat,
         }
 
-        public async static Task<string> RunAsync(string ollama_url, string ollama_model, WorkflowType workflow_type, string text)
+        public async static Task<string> RunAsync(ClientSettings clientSettings, WorkflowType workflow_type, string text)
         {
-            //// Set up the Azure OpenAI client.
-            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
-            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
-            //var client = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
-
-            // Using ollama
-            var client = new OllamaApiClient(ollama_url, ollama_model);
+            var client = clientSettings.CreateClient();
 
             (string log, ChatMessage[] responses) retVal = ("", []);
 
@@ -97,15 +91,9 @@ namespace MAFTesters_Core.MSExampleFiles
 
             return retVal.log;
         }
-        public async static Task<WorkflowEventListener_Response> Run2Async(string ollama_url, string ollama_model, WorkflowType workflow_type, string text)
+        public async static Task<WorkflowEventListener_Response> Run2Async(ClientSettings clientSettings, WorkflowType workflow_type, string text)
         {
-            //// Set up the Azure OpenAI client.
-            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
-            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
-            //var client = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
-
-            // Using ollama
-            var client = new OllamaApiClient(ollama_url, ollama_model);
+            var client = clientSettings.CreateClient();
 
             WorkflowEventListener_Response retVal = null;
 

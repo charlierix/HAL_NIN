@@ -36,8 +36,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -47,7 +47,7 @@ namespace MAFTesters_WPF
                 // Convert the function to a tool
                 var weatherFunction = AIFunctionFactory.Create(WeatherTool.GetWeather);
 
-                var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
+                var client = clientSettings.CreateClient();
 
                 // Create the agent
                 // NOTE: it doesn't look like tools can be dynamically added.  if a new tool gets created, a new agent instance would be needed
@@ -88,8 +88,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -97,7 +97,7 @@ namespace MAFTesters_WPF
 
                 var sessionArgs = GetSessionArgs();
 
-                var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
+                var client = clientSettings.CreateClient();
 
                 // Convert the function into a tool
                 var pythonFunction = AIFunctionFactory.Create(
@@ -135,8 +135,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -144,24 +144,13 @@ namespace MAFTesters_WPF
 
                 var sessionArgs = GetSessionArgs();
 
-                var client = new OllamaApiClient(settings.Value.url, settings.Value.model);
-
                 // Convert the function into a tool
                 var pythonFunction = AIFunctionFactory.Create(
-                    typeof(PythonWriter).GetMethod(nameof(PythonWriter.GeneratePythonScript)),      // reflection pointing to the function that will get invoked
+                    typeof(PythonWriter2).GetMethod(nameof(PythonWriter2.GeneratePythonScript)),      // reflection pointing to the function that will get invoked
                     (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
                     {
-                        var agents = PythonWriter.CreateAgents(client);
-                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator, true);
+                        return new PythonWriter2(sessionArgs.PythonFolder, true, clientSettings);
                     });
-
-
-                // let's see what the agents see
-                string name = pythonFunction.Name;      // this is the function name: GeneratePythonScript
-                string description = pythonFunction.Description;        // this is the contents of the description attribute over the function [Description(...)]
-                var schema = pythonFunction.JsonSchema;
-                var return_schema = pythonFunction.ReturnJsonSchema;
-
 
                 // Invoke the tool directly to test it
                 var tool_args = new AIFunctionArguments();
@@ -171,6 +160,8 @@ namespace MAFTesters_WPF
                 var result = pythonFunction.InvokeAsync(tool_args);
 
                 var temp = result.Result;
+
+
 
             }
             catch (Exception ex)
@@ -200,8 +191,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -212,7 +203,7 @@ namespace MAFTesters_WPF
                     txtPrompt.Text;
 
                 //string report = await AgentsInWorkflows.RunAsync_Stream(settings.Value.url, settings.Value.model, text);
-                string report = await AgentsInWorkflows.RunAsync_Run(settings.Value.url, settings.Value.model, text);
+                string report = await AgentsInWorkflows.RunAsync_Run(clientSettings, text);
 
                 txtLog.Text = report;
             }
@@ -225,8 +216,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -240,7 +231,7 @@ namespace MAFTesters_WPF
 
                 foreach (var flow_type in Enum.GetValues<WorkflowType>())
                 {
-                    results.Add((flow_type, await AgentWorkflowPatterns.RunAsync(settings.Value.url, settings.Value.model, flow_type, text)));
+                    results.Add((flow_type, await AgentWorkflowPatterns.RunAsync(clientSettings, flow_type, text)));
                     //break;
                 }
 
@@ -302,8 +293,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -313,7 +304,7 @@ namespace MAFTesters_WPF
                     "Hello, World!" :
                     txtPrompt.Text;
 
-                var report = await SubWorkflows.RunAsync(settings.Value.url, settings.Value.model, text);
+                var report = await SubWorkflows.RunAsync(text);
 
                 //var description = new StringBuilder();
                 //txtLog.Text = BuildReport(description.ToString(), report);
@@ -349,8 +340,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -360,7 +351,7 @@ namespace MAFTesters_WPF
                     "Hello, World!" :
                     txtPrompt.Text;
 
-                var report = await AgentsInWorkflows.Run2Async_Stream(settings.Value.url, settings.Value.model, text);
+                var report = await AgentsInWorkflows.Run2Async_Stream(clientSettings, text);
 
                 var description = new StringBuilder();
                 description.AppendLine("Chains three agents together in a workflow:");
@@ -379,8 +370,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -393,7 +384,7 @@ namespace MAFTesters_WPF
                 var results = new List<(WorkflowType flow_type, WorkflowEventListener_Response report)>();
 
                 foreach (var flow_type in Enum.GetValues<WorkflowType>())
-                    results.Add((flow_type, await AgentWorkflowPatterns.Run2Async(settings.Value.url, settings.Value.model, flow_type, text)));
+                    results.Add((flow_type, await AgentWorkflowPatterns.Run2Async(clientSettings, flow_type, text)));
 
                 var report = new StringBuilder();
 
@@ -448,8 +439,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -459,7 +450,7 @@ namespace MAFTesters_WPF
                     "Hello, World!" :
                     txtPrompt.Text;
 
-                var report = await SubWorkflows.Run2Async(settings.Value.url, settings.Value.model, text);
+                var report = await SubWorkflows.Run2Async(text);
 
                 var description = new StringBuilder();
                 description.AppendLine("This has a main workflow with edges that add a prefix, call a sub workflow, and a post process that adds a bunch of final text");
@@ -476,8 +467,8 @@ namespace MAFTesters_WPF
         {
             try
             {
-                var settings = GetOllamaValues();
-                if (settings == null)
+                var clientSettings = GetOllamaValues();
+                if (clientSettings == null)
                 {
                     MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -489,7 +480,7 @@ namespace MAFTesters_WPF
 
                 string text = null;     // there's logic in the run to use its own prompt when null
 
-                var results = await MixedWorkflowWithAgentsAndExecutors.RunAsync(settings.Value.url, settings.Value.model, text);
+                var results = await MixedWorkflowWithAgentsAndExecutors.RunAsync(clientSettings, text);
 
                 var report = new StringBuilder();
 
@@ -527,25 +518,24 @@ The tester itself tells an agent to detect prompt injection with instruction on 
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Agents/Agent_Step12_AsFunctionTool
         private void AsFunctionTool_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-
+                // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Agents/Agent_Step12_AsFunctionTool
+                
+                // this is the weather service demo
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/Agents/WorkflowAsAnAgent
         private void WorkflowAsAnAgent_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-
+                // using code that doesn't exist
             }
             catch (Exception ex)
             {
@@ -576,7 +566,7 @@ The tester itself tells an agent to detect prompt injection with instruction on 
             }
         }
 
-        private (string url, string model)? GetOllamaValues()
+        private ClientSettings? GetOllamaValues()
         {
             var model_item = cboModel.SelectedItem as ComboBoxItem;
             string model = model_item?.Content?.ToString();
@@ -584,7 +574,11 @@ The tester itself tells an agent to detect prompt injection with instruction on 
             if (string.IsNullOrEmpty(txtOllamaURL.Text) || string.IsNullOrEmpty(model))
                 return null;
 
-            return (txtOllamaURL.Text, model);
+            return new ClientSettings
+            {
+                Ollama_URL = txtOllamaURL.Text,
+                Ollama_Model = model,
+            };
         }
 
         private SessionArgs GetSessionArgs()

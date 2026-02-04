@@ -40,7 +40,7 @@ namespace MAFTesters_Core.MSExampleFiles
     /// </remarks>
     public static class MixedWorkflowWithAgentsAndExecutors
     {
-        public async static Task<(string log, (string prompt, WorkflowEventListener_Response response)[] calls)> RunAsync(string ollama_url, string ollama_model, string text)
+        public async static Task<(string log, (string prompt, WorkflowEventListener_Response response)[] calls)> RunAsync(ClientSettings clientSettings, string text)
         {
             var log = new ConcurrentQueue<string>();
 
@@ -48,13 +48,7 @@ namespace MAFTesters_Core.MSExampleFiles
             log.Enqueue("=== Mixed Workflow: Agents and Executors ===");
             log.Enqueue("");
 
-            //// Set up the Azure OpenAI client
-            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
-            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
-            //var chatClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
-
-            // Using ollama
-            var client = new OllamaApiClient(ollama_url, ollama_model);
+            var client = clientSettings.CreateClient();
 
             // Create executors for text processing
             UserInputExecutor userInput = new(log);

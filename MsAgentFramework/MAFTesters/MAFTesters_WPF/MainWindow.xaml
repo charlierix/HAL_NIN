@@ -53,10 +53,8 @@
                                 <Button Content="agent workflow patterns" Click="AgentWorkflowPatterns2_Click"/>
                                 <Button Content="sub workflows" Click="SubWorkflows2_Click"/>
                                 <Button Content="mixed workflow agents and executors" Click="MixedWorkflowAgentsAndExecutors_Click"/>
-
-                                <Button Content="as function tool" Margin="0,16,0,0" Click="AsFunctionTool_Click"/>
-
-                                <Button Content="workflow as an agent" Margin="0,8,0,0" Click="WorkflowAsAnAgent_Click"/>
+                                <Button Visibility="Collapsed" Content="as function tool" Click="AsFunctionTool_Click"/>
+                                <Button Visibility="Collapsed" Content="workflow as an agent" Margin="0,8,0,0" Click="WorkflowAsAnAgent_Click"/>
                             </StackPanel>
                         </Expander>
                     </StackPanel>

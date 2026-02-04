@@ -116,15 +116,9 @@ namespace MAFTesters_Core.MSExampleFiles
 
             return retVal.ToString();
         }
-        public static async Task<string> RunAsync_Run(string ollama_url, string ollama_model, string text)
+        public static async Task<string> RunAsync_Run(ClientSettings clientSettings, string text)
         {
-            //// Set up the Azure OpenAI client
-            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
-            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
-            //var chatClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
-
-            // Using ollama
-            var client = new OllamaApiClient(ollama_url, ollama_model);
+            var client = clientSettings.CreateClient();
 
             // Create agents
             AIAgent frenchAgent = GetTranslationAgent("French", client);
@@ -201,15 +195,9 @@ namespace MAFTesters_Core.MSExampleFiles
             return retVal.ToString();
         }
 
-        public static async Task<WorkflowEventListener_Response> Run2Async_Stream(string ollama_url, string ollama_model, string text)
+        public static async Task<WorkflowEventListener_Response> Run2Async_Stream(ClientSettings clientSettings, string text)
         {
-            //// Set up the Azure OpenAI client
-            //var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT is not set.");
-            //var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT_NAME") ?? "gpt-4o-mini";
-            //var chatClient = new AzureOpenAIClient(new Uri(endpoint), new AzureCliCredential()).GetChatClient(deploymentName).AsIChatClient();
-
-            // Using ollama
-            var client = new OllamaApiClient(ollama_url, ollama_model);
+            var client = clientSettings.CreateClient();
 
             // Create agents
             AIAgent frenchAgent = GetTranslationAgent("French", client);

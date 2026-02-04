@@ -25,7 +25,7 @@ namespace MAFTesters_Core.MSExampleFiles
     /// </summary>
     public static class SubWorkflows
     {
-        public static async Task<string> RunAsync(string ollama_url, string ollama_model, string text)
+        public static async Task<string> RunAsync(string text)
         {
             var console = new StringBuilder();
 
@@ -101,7 +101,7 @@ namespace MAFTesters_Core.MSExampleFiles
 
             return console.ToString();
         }
-        public static async Task<WorkflowEventListener_Response> Run2Async(string ollama_url, string ollama_model, string text)
+        public static async Task<WorkflowEventListener_Response> Run2Async(string text)
         {
             var console = new StringBuilder();
 
