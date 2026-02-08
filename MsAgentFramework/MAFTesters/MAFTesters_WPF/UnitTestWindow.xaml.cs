@@ -1,7 +1,6 @@
 ﻿using MAFTesters_Core;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace MAFTesters_WPF
 {

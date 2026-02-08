@@ -1,6 +1,7 @@
 ﻿using MAFTesters_Core;
 using MAFTesters_Core.MSExampleFiles;
 using MAFTesters_Core.Tools;
+using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using System.IO;
@@ -43,7 +44,6 @@ namespace MAFTesters_WPF
                     return;
                 }
 
-
                 // Convert the function to a tool
                 var weatherFunction = AIFunctionFactory.Create(WeatherTool.GetWeather);
 
@@ -57,29 +57,28 @@ namespace MAFTesters_WPF
                         tools: [weatherFunction],
                         name: "myagent");
 
+                var workflow = new WorkflowBuilder(agent).
+                    WithOutputFrom(agent).
+                    Build();
 
-
-                /*
-                Thread Management: GetNewThread() creates a conversation context that maintains message history. Each thread is isolated, allowing you to manage multiple conversations independently.
-                */
-
-                throw new ApplicationException("agent.GetNewThread() disappeared after updating nuget.  change this to be a workflow");
-
-                //// Create a thread for conversation
-                //var thread = agent.GetNewThread();
-
-
-                //// Run the agent with streaming
-                //// NOTE: it wan't calling the weather tool unless the prompt called for temperature
-                //// NOTE: it asked for a location when one wasn't provided
+                // Run the agent with streaming
+                // NOTE: it wan't calling the weather tool unless the prompt called for temperature
+                // NOTE: it asked for a location when one wasn't provided
                 //var streamingResponse = agent.RunStreamingAsync(txtPrompt.Text, thread);
+                await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, txtPrompt.Text));
 
-                //txtLog.Text = "";
+                var response = await WorkflowEventListener.ListenToStream(run);
 
-                //await foreach (var chunk in streamingResponse)
-                //{
-                //    txtLog.Text += chunk;
-                //}
+                var description = new StringBuilder();
+                description.AppendLine("This is an agent that is told about a tool that returns weather for a location");
+                description.AppendLine("- try asking a random question unrelated to weather, it won't call the tool");
+                description.AppendLine("- try asking the weather, but don't provide a location");
+                description.AppendLine("");
+                description.AppendLine("There are also interesting results if the tool returns an impossible temperature, or");
+                description.AppendLine("an error message.  There is nothing in the system prompt telling how to deal with errors.");
+                description.AppendLine("Any error handling comes native by the model");
+
+                txtLog.Text = BuildReport(description.ToString(), response);
             }
             catch (Exception ex)
             {
@@ -155,13 +154,19 @@ namespace MAFTesters_WPF
                     });
 
                 // Invoke the tool directly to test it
+
+                // NOTE: the writer is zero based, validator can't handle that it's not defined.  there needs to be a prompt interview window that drives out those types of questions
+
+                string text = txtPrompt.Text.Trim() == "" ?
+                    "What is the 32nd number in the fibonacci sequence?" :
+                    txtPrompt.Text;
+
                 var tool_args = new AIFunctionArguments();
                 tool_args.Add("desiredFilename", $"{DateTime.Now:yyyyMMdd HHmmss} writer test.py");
-                tool_args.Add("requirements", "What is the 32nd number in the fibonacci sequence?");
+                tool_args.Add("requirements", text);
 
-                var result = pythonFunction.InvokeAsync(tool_args);
+                var result = await pythonFunction.InvokeAsync(tool_args);
 
-                var temp = await result;
 
 
 

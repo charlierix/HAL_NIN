@@ -82,6 +82,20 @@ namespace MAFTesters_Core.Tools
 
             for (int i = 0; i < 12; i++)
             {
+
+
+
+                // TODO: sending the raw errors as a list to the script writer isn't productive
+                // make another agent that creates a summary of the errors as refined requirements
+
+
+                // TODO: after 2 or more retries, have another agent look through errors to decide whether to kick back
+                // because of too loose requirements
+                
+
+
+
+
                 // Generate python
                 var script = await GetScriptContents(filename_escaped, requirements, error_history, agents.writer);
                 if (!script.IsSuccess)
@@ -108,6 +122,8 @@ namespace MAFTesters_Core.Tools
                     success = true;
                     break;
                 }
+
+                File.Delete(fullFilename);
 
                 error_history.Add(python_error_msg);
             }
@@ -196,8 +212,9 @@ $@"filename: {script_name}
 {source_code.Message}
 ```";
 
-            var workflow = new WorkflowBuilder(agent)
-                .Build();
+            var workflow = new WorkflowBuilder(agent).
+                WithOutputFrom(agent).
+                Build();
 
             // Execute the workflow
             await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt));
