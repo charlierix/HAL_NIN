@@ -9,6 +9,7 @@
         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
             <Button Content="ensure venv" Click="EnsureVenv_Click"/>
             <Button Content="pyflakes" Click="PyFlakes_Click"/>
+            <Button Content="parse markdown" Click="ParseMarkdown_Click"/>
         </StackPanel>
     </Grid>
 </Window>

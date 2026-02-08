@@ -91,8 +91,7 @@ namespace MAFTesters_Core.MSExampleFiles
                 if (evt is ExecutorCompletedEvent completedEvent)
                     end_results.AppendLine();
 
-                //if (evt is AgentResponseUpdateEvent executorComplete)     // this type doesn't exist
-                else if (evt is AgentRunUpdateEvent updateEvent)
+                else if (evt is AgentResponseUpdateEvent updateEvent)
                     end_results.Append($"{updateEvent.Data}");
 
                 else if (evt is WorkflowOutputEvent outputEvent)        // this never fires (maybe because this isn't using .WithOutputFrom in the workflow builder?)
@@ -169,8 +168,7 @@ namespace MAFTesters_Core.MSExampleFiles
                 if (evt is ExecutorCompletedEvent completedEvent)
                     end_results.AppendLine();
 
-                //if (evt is AgentResponseUpdateEvent executorComplete)     // this type doesn't exist
-                else if (evt is AgentRunUpdateEvent updateEvent)
+                else if (evt is AgentResponseUpdateEvent updateEvent)
                     end_results.Append($"{updateEvent.Data}");
 
                 else if (evt is WorkflowOutputEvent outputEvent)        // this never fires (maybe because this isn't using .WithOutputFrom in the workflow builder?)

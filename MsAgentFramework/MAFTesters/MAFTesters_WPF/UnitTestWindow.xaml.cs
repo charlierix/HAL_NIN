@@ -1,6 +1,7 @@
 ﻿using MAFTesters_Core;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace MAFTesters_WPF
 {
@@ -36,6 +37,25 @@ namespace MAFTesters_WPF
 
                 string? error_valid = PythonUtils.CheckForErrors(python_folder, "example - valid.py");
                 string? error_errors = PythonUtils.CheckForErrors(python_folder, "example - errors.py");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private void ParseMarkdown_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string text =
+@"```python
+def get_log_folder():
+    retVal = 'logs/' + datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+    os.makedirs(retVal)
+    return retVal
+```";
+
+                string parsed = MarkdownParser.ExtractOnlyText(text);
             }
             catch (Exception ex)
             {

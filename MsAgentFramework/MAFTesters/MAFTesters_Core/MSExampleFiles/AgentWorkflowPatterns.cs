@@ -221,8 +221,7 @@ namespace MAFTesters_Core.MSExampleFiles
                 //if (evt is ExecutorCompletedEvent completedEvent)
                 //    end_results.AppendLine();
 
-                //if (evt is AgentResponseUpdateEvent e)        // this doesn't exist
-                if (evt is AgentRunUpdateEvent e)
+                if (evt is AgentResponseUpdateEvent e)
                 {
                     if (e.ExecutorId != lastExecutorId)
                     {

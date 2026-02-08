@@ -89,7 +89,7 @@ namespace MAFTesters_Core
 
             // These two pair together.  build up a string when ExecutorCompletedEvent, then commit it as a chatmessage when
             // AgentRunUpdateEvent (using a dictionary by ExecutorId if they are running in parallel)
-            if (evt is AgentRunUpdateEvent updateEvent)
+            if (evt is AgentResponseUpdateEvent updateEvent)
             {
                 string key = updateEvent.ExecutorId ?? "";
                 string data = updateEvent.Data?.ToString() ?? "";
@@ -317,7 +317,7 @@ namespace MAFTesters_Core
         public ResponseMessage GetSingleMessage(string agent_name, bool error_if_emptymessage = true)
         {
             // there should just be one chat message
-            if (Messages_Final == null || Messages_Final.Length == 1)
+            if (Messages_Final == null || Messages_Final.Length == 0)
                 return ResponseMessage.BuildError($"ERROR: didn't get a response from {agent_name} agent");
 
             else if (Messages_Final.Length > 1)

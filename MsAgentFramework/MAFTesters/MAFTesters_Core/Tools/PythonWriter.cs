@@ -35,7 +35,7 @@ namespace MAFTesters_Core.Tools
 
             // TODO: make slightly different agents: one if an entire script is desired, one if just a function is desired
 
-            var writer = client.CreateAIAgent(
+            var writer = client.AsAIAgent(
                 instructions:
 @"You are an agent inside of a tool that generates python scripts.  The user prompt will be the desired name of the python script as well as a detailed description of what the script needs to do.
 
@@ -49,7 +49,7 @@ Please only output the contents of the script, since your response will be used 
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_WriterAgent");
 
-            var validator = client.CreateAIAgent(
+            var validator = client.AsAIAgent(
                 instructions:
 @"You are an agent responsible for validating generated python scripts.
 
@@ -126,29 +126,36 @@ ERROR: reason(s) for error",
         // This never finishes.  Instead try a workflow
         private async Task<(string? contents, string? error_msg)> GetScriptContents_HANGS(string script_name, string requirements)
         {
-            // Create a thread for conversation
-            var thread = _agent_writer_full.GetNewThread();
-
-
-            // Run the agent with streaming
-            // NOTE: it wan't calling the weather tool unless the prompt called for temperature
-            // NOTE: it asked for a location when one wasn't provided
-            //var streamingResponse = _agent_writer_full.RunAsync(requirements, thread);
-
-            //var response = streamingResponse.GetAwaiter().GetResult();
-
-            //string response_text = response.Text;
-
-            var streamingResponse = _agent_writer_full.RunStreamingAsync($"{script_name}{Environment.NewLine}{Environment.NewLine}{requirements}", thread);
-
-            StringBuilder sb = new StringBuilder();
-
-            await foreach (var chunk in streamingResponse)
-                sb.Append(chunk);
+            // GetNewThread was changed to GetNewThreadAsync in AIAgent, but that's not seen by this solution
+            // doesn't really matter, since this is an example of failure
+            //
+            // note that the workflow was deadlocking as soon as I tried to use task.getawaiter.getresult
 
 
 
-            string response_text = sb.ToString();
+            //// Create a thread for conversation
+            //var thread = await _agent_writer_full.GetNewThread();
+
+
+            //// Run the agent with streaming
+            //// NOTE: it wan't calling the weather tool unless the prompt called for temperature
+            //// NOTE: it asked for a location when one wasn't provided
+            ////var streamingResponse = _agent_writer_full.RunAsync(requirements, thread);
+
+            ////var response = streamingResponse.GetAwaiter().GetResult();
+
+            ////string response_text = response.Text;
+
+            //var streamingResponse = _agent_writer_full.RunStreamingAsync($"{script_name}{Environment.NewLine}{Environment.NewLine}{requirements}", thread);
+
+            //StringBuilder sb = new StringBuilder();
+
+            //await foreach (var chunk in streamingResponse)
+            //    sb.Append(chunk);
+
+
+
+            //string response_text = sb.ToString();
 
 
 

@@ -31,7 +31,7 @@ namespace MAFTesters_Core.Tools
         // gets used over time, other overloads may be wanted with more specialized params
 
         [Description("Creates a python script that will satisfy the requirements.  This script could be for anything: complex math, analyze a file, etc.  Returns the filename that was created, or an error message")]
-        public ResponseMessage GeneratePythonScript(
+        public Task<ResponseMessage> GeneratePythonScriptAsync(
             [Description("What the python file should be called (the folder will be defined by the session, so only need filename, .py will automatically be added to the end of the filename)")]
             string desiredFilename,
             [Description("Details about what this script should do, expected parameters, what it should return")]
@@ -39,16 +39,15 @@ namespace MAFTesters_Core.Tools
         {
             try
             {
-                Task<ResponseMessage> result = GeneratePythonScriptAsync(desiredFilename, requirements);
-                return result.GetAwaiter().GetResult();
+                return GeneratePythonScript_private(desiredFilename, requirements);
             }
             catch (Exception ex)
             {
-                return ResponseMessage.BuildError($"Caught exception in python writer: {ex}");
+                return Task.FromResult(ResponseMessage.BuildError($"Caught exception in python writer: {ex}"));
             }
         }
 
-        private async Task<ResponseMessage> GeneratePythonScriptAsync(string desiredFilename, string requirements)
+        private async Task<ResponseMessage> GeneratePythonScript_private(string desiredFilename, string requirements)
         {
             // Make sure there is a virtual environment
             PythonUtils.EnsurePythonFolderInitialized(_pythonFolder);
@@ -161,8 +160,9 @@ namespace MAFTesters_Core.Tools
                 }
             }
 
-            var workflow = new WorkflowBuilder(agent)
-                .Build();
+            var workflow = new WorkflowBuilder(agent).
+                WithOutputFrom(agent).
+                Build();
 
             // Execute the workflow
             await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
@@ -170,7 +170,16 @@ namespace MAFTesters_Core.Tools
             var response = await WorkflowEventListener.ListenToStream(run);
 
             // Get the response text
-            return response.GetSingleMessage("writer");
+            var retVal = response.GetSingleMessage("writer");
+
+            if (!retVal.IsSuccess)
+                return retVal;
+
+            // Despite prompting not to, the model kept wrapping the script in a markdown block.  Call a dedicated function
+            // to make sure it's not wrapped in markdown
+            string cleaned = MarkdownParser.ExtractOnlyText(retVal.Message);
+
+            return ResponseMessage.BuildSuccess(cleaned);
         }
 
         // Calls an agent to validate the python text, returns an error message or null
@@ -233,7 +242,7 @@ $@"filename: {script_name}
 
             // TODO: make slightly different agents: one if an entire script is desired, one if just a function is desired
 
-            var writer = client.CreateAIAgent(
+            var writer = client.AsAIAgent(
                 instructions:
 @"You are an agent inside of a tool that generates python scripts.  The user prompt will be the desired name of the python script as well as a detailed description of what the script needs to do.
 
@@ -247,7 +256,7 @@ Please only output the contents of the script that can be pasted directly into a
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_WriterAgent");
 
-            var validator = client.CreateAIAgent(
+            var validator = client.AsAIAgent(
                 instructions:
 @"You are an agent responsible for validating generated python scripts.
 
