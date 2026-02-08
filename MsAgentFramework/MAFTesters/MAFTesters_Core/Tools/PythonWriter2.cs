@@ -1,11 +1,8 @@
 ﻿using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MAFTesters_Core.Tools
 {
@@ -33,12 +30,25 @@ namespace MAFTesters_Core.Tools
         // This interface will probably evolve over time.  Start with a single string that is just requirements.  As this
         // gets used over time, other overloads may be wanted with more specialized params
 
-        [Description("Creates a python script that will satisfy the requirements.  This script could be for anything: complex math, analyze a file, etc.  Returns the filename that was created")]
-        public string GeneratePythonScript(
+        [Description("Creates a python script that will satisfy the requirements.  This script could be for anything: complex math, analyze a file, etc.  Returns the filename that was created, or an error message")]
+        public ResponseMessage GeneratePythonScript(
             [Description("What the python file should be called (the folder will be defined by the session, so only need filename, .py will automatically be added to the end of the filename)")]
             string desiredFilename,
             [Description("Details about what this script should do, expected parameters, what it should return")]
             string requirements)
+        {
+            try
+            {
+                Task<ResponseMessage> result = GeneratePythonScriptAsync(desiredFilename, requirements);
+                return result.GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                return ResponseMessage.BuildError($"Caught exception in python writer: {ex}");
+            }
+        }
+
+        private async Task<ResponseMessage> GeneratePythonScriptAsync(string desiredFilename, string requirements)
         {
             // Make sure there is a virtual environment
             PythonUtils.EnsurePythonFolderInitialized(_pythonFolder);
@@ -56,23 +66,126 @@ namespace MAFTesters_Core.Tools
             var agents = CreateAgents(client);
 
 
-            // TODO: figure out the best way to implement tasks within the function while keeping the outer caller non async
 
-            Task<(string? contents, string? error_msg)> script = GetScriptContents(filename, requirements, agents.writer);
-
+            // do an intial pass at the requirements and see if it's simple enough for a one shot or if it needs to be broken up and recursed
 
 
 
+            // TODO: make another agent that documents the script, merging requirements with code
+            //  this should help a future agent that looks through generated scripts and builds tools out of them (trying to find common
+            //  generated solutions and make a dedicated robust tool)
 
 
 
-            return "";
+
+            var error_history = new List<string>();
+            bool success = false;
+
+            for (int i = 0; i < 12; i++)
+            {
+                // Generate python
+                var script = await GetScriptContents(filename_escaped, requirements, error_history, agents.writer);
+                if (!script.IsSuccess)
+                    return script;
+
+                // Do static analysis of generated python
+                File.WriteAllText(fullFilename, script.Message);
+
+                string? lint_error = PythonUtils.CheckForErrors(_pythonFolder, filename);
+
+                // if this is a partial file, delete it
+
+                if (!string.IsNullOrWhiteSpace(lint_error))
+                {
+                    error_history.Add(lint_error);
+                    continue;
+                }
+
+                // Ask llm to look for issues
+                string? python_error_msg = await ValidatePythonContents(filename_escaped, requirements, script, agents.validator);
+
+                if (string.IsNullOrWhiteSpace(python_error_msg))
+                {
+                    success = true;
+                    break;
+                }
+
+                error_history.Add(python_error_msg);
+            }
+
+            if (!success)
+            {
+                // TODO: decide whether to kick back to the parent or attempt a divide and recurse
+
+                return BuildRetryHistoryErrorResponse(requirements, error_history);
+            }
+
+
+
+
+
+            // gather up all the results and build a final file (if there were partial files)
+
+            // if there were partial files, do another lint
+
+
+
+
+            return ResponseMessage.BuildSuccess(fullFilename);
         }
 
-        // This never finishes.  Instead try a workflow
-        private async Task<(string? contents, string? error_msg)> GetScriptContents(string script_name, string requirements, ChatClientAgent agent)
+        private async Task<ResponseMessage> GetScriptContents(string script_name, string requirements, List<string> error_history, ChatClientAgent agent)
         {
-            string prompt = $"{script_name}{Environment.NewLine}{Environment.NewLine}{requirements}";
+            var prompt = new StringBuilder();
+
+            prompt.AppendLine($"filename: {script_name}");
+            prompt.AppendLine();
+            prompt.AppendLine("```requirements");
+            prompt.AppendLine(requirements);
+            prompt.AppendLine("```");
+
+            if (error_history.Count > 0)
+            {
+                prompt.AppendLine();
+                string s = error_history.Count > 1 ? "s" : "";
+                prompt.AppendLine($"error message{s} from previous attempt{s} at writing this:");
+
+                for (int i = 0; i < error_history.Count; i++)
+                {
+                    if (i > 0)
+                        prompt.AppendLine();
+
+                    prompt.AppendLine("```error");
+                    prompt.AppendLine(error_history[i]);
+                    prompt.AppendLine("```");
+                }
+            }
+
+            var workflow = new WorkflowBuilder(agent)
+                .Build();
+
+            // Execute the workflow
+            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+
+            var response = await WorkflowEventListener.ListenToStream(run);
+
+            // Get the response text
+            return response.GetSingleMessage("writer");
+        }
+
+        // Calls an agent to validate the python text, returns an error message or null
+        private async Task<string?> ValidatePythonContents(string script_name, string requirements, ResponseMessage source_code, ChatClientAgent agent)
+        {
+            string prompt =
+$@"filename: {script_name}
+
+```requirements
+{requirements}
+```
+
+```python
+{source_code.Message}
+```";
 
             var workflow = new WorkflowBuilder(agent)
                 .Build();
@@ -82,24 +195,38 @@ namespace MAFTesters_Core.Tools
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
+            var message = response.GetSingleMessage("validator");
+            if (!message.IsSuccess)
+                return string.IsNullOrWhiteSpace(message.ErrorMessage) ?
+                    "No response back from the python validator" :
+                    message.ErrorMessage;
 
-            // there should just be one
-            //response.Messages_Final       
+            else if (message.Message.Trim().Equals("success", StringComparison.OrdinalIgnoreCase))
+                return null;
 
-            if (response.Messages_Final == null || response.Messages_Final.Length == 1)
-                return (null, "ERROR: didn't get a response from writer agent");
-
-            else if (response.Messages_Final.Length > 1)
-                return (null, $"ERROR: multiple responses were returned from the writer agent: {response.Messages_Final.Length}");
-
-            else if(string.IsNullOrWhiteSpace(response.Messages_Final[0].Text))
-                return (null, "ERROR: got a blank response from writer agent");
-
-            return (response.Messages_Final[0].Text, null);
+            return message.Message;
         }
 
+        private static ResponseMessage BuildRetryHistoryErrorResponse(string requirements, List<string> error_history)
+        {
+            var report = new StringBuilder();
 
+            report.AppendLine("Had trouble building python script after multiple retries");
+            report.AppendLine();
+            report.AppendLine("```requirements");
+            report.AppendLine(requirements);
+            report.AppendLine("```");
 
+            foreach (string error in error_history)
+            {
+                report.AppendLine();
+                report.AppendLine("```error");
+                report.AppendLine(error);
+                report.AppendLine("```");
+            }
+
+            return ResponseMessage.BuildError(report.ToString());
+        }
 
         private static (ChatClientAgent writer, ChatClientAgent validator) CreateAgents(IChatClient client)
         {
@@ -116,7 +243,7 @@ If the instrutions are too vague or contradictory, please respond with: 'ERROR: 
 
 When writing the script, please think about edge cases, potential bugs, infinite loops, etc.
 
-Please only output the contents of the script, since your response will be used programatically",
+Please only output the contents of the script that can be pasted directly into a python script (don't wrap in markdown), since your response will be used programatically",
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_WriterAgent");
 

@@ -313,5 +313,20 @@ namespace MAFTesters_Core
         public required ChatMessage[] Messages_Building { get; init; }
 
         public required string LogReport { get; init; }
+
+        public ResponseMessage GetSingleMessage(string agent_name, bool error_if_emptymessage = true)
+        {
+            // there should just be one chat message
+            if (Messages_Final == null || Messages_Final.Length == 1)
+                return ResponseMessage.BuildError($"ERROR: didn't get a response from {agent_name} agent");
+
+            else if (Messages_Final.Length > 1)
+                return ResponseMessage.BuildError($"ERROR: multiple responses were returned from the {agent_name} agent: {Messages_Final.Length}");
+
+            else if (error_if_emptymessage && string.IsNullOrWhiteSpace(Messages_Final[0].Text))
+                return ResponseMessage.BuildError($"ERROR: got a blank response from {agent_name} agent");
+
+            return ResponseMessage.BuildSuccess(Messages_Final[0].Text ?? "");
+        }
     }
 }
