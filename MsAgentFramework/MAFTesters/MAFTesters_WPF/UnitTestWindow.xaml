@@ -10,6 +10,9 @@
             <Button Content="ensure venv" Click="EnsureVenv_Click"/>
             <Button Content="pyflakes" Click="PyFlakes_Click"/>
             <Button Content="parse markdown" Click="ParseMarkdown_Click"/>
+            <Button Content="get json schema" Click="GetJSONSchema_Click"/>
+            <Button Content="deserialize loose json" Click="DeserializeLooseJSON_Click"/>
+            <Button Content="remove outer fence" Click="RemoveOuterFence_Click"/>
         </StackPanel>
     </Grid>
 </Window>

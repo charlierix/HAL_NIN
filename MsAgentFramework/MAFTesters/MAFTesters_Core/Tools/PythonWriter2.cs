@@ -14,6 +14,26 @@ namespace MAFTesters_Core.Tools
     // (major functions) would be needed.  then pass that to another agent that decides if a single script could be made of the 
     // whole thing, or if each component needs to break into sub components
 
+
+    // TODO: make this return an object
+    //  error message about why it failed
+    //  generated python script filename
+    //  markdown filename - this contains requirements, struggles.  it can be mined by some other process that looks for groups of similar scripts to turn into more robust tools
+    //
+    // another 'file' that could be useful is a usage tracker (probably a db).  every time one of these scripts is used, a log
+    // entry is made.  maybe not full input, but a score if it works as expected.  if there was an error, store a bug report with
+    // inputs and outcome
+
+
+
+    // TODO: it's outside the scope of this tool, but a caller tool could try to break the problem down...this tool builds the code
+    // top down.  take in a problem, if it's too big for a one shot, divide and recurse
+    //
+    // another approach is how this tool was written:  get one piece working and tested, then add functionality.  basically growing
+    // the code from an initial simplified requirement, then adding requirements and rewriting, always satisfying unit tests as it
+    // grows
+
+
     public class PythonWriter2
     {
         private readonly string _pythonFolder;
@@ -62,7 +82,9 @@ namespace MAFTesters_Core.Tools
 
             // Create agents
             var client = _clientSettings.CreateClient();
-            var agents = CreateAgents(client);
+            var agent_writer = CreateAgent_Writer(client);
+            var agent_validator = CreateAgent_Validator(client);
+            var agent_requirement_refiner = CreateAgent_RequirementRefiner(client);
 
 
 
@@ -77,27 +99,16 @@ namespace MAFTesters_Core.Tools
 
 
 
-            var error_history = new List<string>();
+            var error_history = new List<ValidatorResponse[]>();
             bool success = false;
 
             for (int i = 0; i < 12; i++)
             {
-
-
-
-                // TODO: sending the raw errors as a list to the script writer isn't productive
-                // make another agent that creates a summary of the errors as refined requirements
-
-
-                // TODO: after 2 or more retries, have another agent look through errors to decide whether to kick back
-                // because of too loose requirements
-                
-
-
-
+                // Possibly refine the prompt if there have been errors
+                string script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, agent_requirement_refiner);
 
                 // Generate python
-                var script = await GetScriptContents(filename_escaped, requirements, error_history, agents.writer);
+                var script = await GetScriptContents(script_prompt, agent_writer);
                 if (!script.IsSuccess)
                     return script;
 
@@ -110,14 +121,14 @@ namespace MAFTesters_Core.Tools
 
                 if (!string.IsNullOrWhiteSpace(lint_error))
                 {
-                    error_history.Add(lint_error);
+                    error_history.Add([new ValidatorResponse { Severity = IssueSeverity.Error, Description = lint_error }]);
                     continue;
                 }
 
                 // Ask llm to look for issues
-                string? python_error_msg = await ValidatePythonContents(filename_escaped, requirements, script, agents.validator);
+                var python_error_msgs = await ValidatePythonContents(filename_escaped, requirements, script, agent_validator);
 
-                if (string.IsNullOrWhiteSpace(python_error_msg))
+                if (!python_error_msgs.Any(o => o.Severity == IssueSeverity.Error))
                 {
                     success = true;
                     break;
@@ -125,12 +136,21 @@ namespace MAFTesters_Core.Tools
 
                 File.Delete(fullFilename);
 
-                error_history.Add(python_error_msg);
+                error_history.Add(python_error_msgs);
             }
 
             if (!success)
             {
                 // TODO: decide whether to kick back to the parent or attempt a divide and recurse
+                // this would be an agent that is told to make an executive decision
+                //  - what are the contentious points, for each
+                //      - is it way too vague?
+                //      - can it be solved by returning solutions for each possible interpretation of the requirement?
+                //  - is it simply failing because the code is buggy?
+                //      - can it be broken into cleaner sets of requirements?
+                //
+                // after typing this out, it looks like a fragile decision tree.  it may be better to have a few agents
+                // that sit in committee, each agent playing a certain role
 
                 return BuildRetryHistoryErrorResponse(requirements, error_history);
             }
@@ -149,31 +169,60 @@ namespace MAFTesters_Core.Tools
             return ResponseMessage.BuildSuccess(fullFilename);
         }
 
-        private async Task<ResponseMessage> GetScriptContents(string script_name, string requirements, List<string> error_history, ChatClientAgent agent)
+        #region Private Methods - agent calls
+
+        private async Task<string> GetScriptPrompt(string script_name, string requirements, List<ValidatorResponse[]> error_history, ChatClientAgent agent)
         {
+            string new_requirements;
+            string? error_summary = null;
+
+            if (error_history.Count < 2)
+            {
+                new_requirements = requirements;
+
+                if (error_history.Count == 1)
+                    error_summary = GetValidatorResponseReport(error_history[0]);
+            }
+            else
+            {
+                var refined = await GetScriptPrompt_Refine(requirements, error_history, agent);
+                if (refined == null)
+                    throw new ApplicationException($"Couldn't cast refine call result to {nameof(PromptRefine)} object");
+
+                new_requirements = refined.NewPrompt;
+                error_summary = GetValidatorResponseReport(refined.SummarizedErrorList);
+            }
+
             var prompt = new StringBuilder();
 
             prompt.AppendLine($"filename: {script_name}");
             prompt.AppendLine();
             prompt.AppendLine("```requirements");
+            prompt.AppendLine(new_requirements);
+            prompt.AppendLine("```");
+
+            if (error_summary != null)
+            {
+                prompt.AppendLine();
+                prompt.AppendLine($"error messages from previous attempt at writing this:");
+                prompt.AppendLine();
+                prompt.AppendLine(error_summary);
+            }
+
+            return prompt.ToString();
+        }
+        private async Task<PromptRefine> GetScriptPrompt_Refine(string requirements, List<ValidatorResponse[]> error_history, ChatClientAgent agent)
+        {
+            var prompt = new StringBuilder();
+
+            prompt.AppendLine("```requirements");
             prompt.AppendLine(requirements);
             prompt.AppendLine("```");
 
-            if (error_history.Count > 0)
+            foreach (var error_set in error_history)
             {
                 prompt.AppendLine();
-                string s = error_history.Count > 1 ? "s" : "";
-                prompt.AppendLine($"error message{s} from previous attempt{s} at writing this:");
-
-                for (int i = 0; i < error_history.Count; i++)
-                {
-                    if (i > 0)
-                        prompt.AppendLine();
-
-                    prompt.AppendLine("```error");
-                    prompt.AppendLine(error_history[i]);
-                    prompt.AppendLine("```");
-                }
+                prompt.AppendLine(GetValidatorResponseReport(error_set));
             }
 
             var workflow = new WorkflowBuilder(agent).
@@ -182,6 +231,27 @@ namespace MAFTesters_Core.Tools
 
             // Execute the workflow
             await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+
+            var response = await WorkflowEventListener.ListenToStream(run);
+
+            // Get the response text
+            var refine_result = response.GetSingleMessage("prompt refiner");
+
+            if (!refine_result.IsSuccess)
+                throw new ApplicationException($"Had trouble calling prompt refiner: {refine_result.GetReport()}");
+
+            // Cast to response objct
+            return StronglyTypedPromptHelper<PromptRefine>.ParseResponse(refine_result.Message);
+        }
+
+        private async Task<ResponseMessage> GetScriptContents(string prompt, ChatClientAgent agent)
+        {
+            var workflow = new WorkflowBuilder(agent).
+                WithOutputFrom(agent).
+                Build();
+
+            // Execute the workflow
+            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
@@ -199,7 +269,7 @@ namespace MAFTesters_Core.Tools
         }
 
         // Calls an agent to validate the python text, returns an error message or null
-        private async Task<string?> ValidatePythonContents(string script_name, string requirements, ResponseMessage source_code, ChatClientAgent agent)
+        private async Task<ValidatorResponse[]> ValidatePythonContents(string script_name, string requirements, ResponseMessage source_code, ChatClientAgent agent)
         {
             string prompt =
 $@"filename: {script_name}
@@ -224,16 +294,21 @@ $@"filename: {script_name}
             var message = response.GetSingleMessage("validator");
             if (!message.IsSuccess)
                 return string.IsNullOrWhiteSpace(message.ErrorMessage) ?
-                    "No response back from the python validator" :
-                    message.ErrorMessage;
+                    [new ValidatorResponse { Severity = IssueSeverity.Error, Description = "No response back from the python validator" }] :
+                    [new ValidatorResponse { Severity = IssueSeverity.Error, Description = message.ErrorMessage }];
 
-            else if (message.Message.Trim().Equals("success", StringComparison.OrdinalIgnoreCase))
-                return null;
+            else if (string.IsNullOrWhiteSpace(message.Message))
+                return [];
 
-            return message.Message;
+            var validations = StronglyTypedPromptHelper<ValidatorResponse[]>.ParseResponse(message.Message);
+
+            return validations;
         }
 
-        private static ResponseMessage BuildRetryHistoryErrorResponse(string requirements, List<string> error_history)
+        #endregion
+        #region Private Methods
+
+        private static ResponseMessage BuildRetryHistoryErrorResponse(string requirements, List<ValidatorResponse[]> error_history)
         {
             var report = new StringBuilder();
 
@@ -243,23 +318,37 @@ $@"filename: {script_name}
             report.AppendLine(requirements);
             report.AppendLine("```");
 
-            foreach (string error in error_history)
+            foreach (var run in error_history)
             {
                 report.AppendLine();
-                report.AppendLine("```error");
-                report.AppendLine(error);
-                report.AppendLine("```");
+                report.AppendLine(GetValidatorResponseReport(run));
             }
 
             return ResponseMessage.BuildError(report.ToString());
         }
 
-        private static (ChatClientAgent writer, ChatClientAgent validator) CreateAgents(IChatClient client)
+        private static string GetValidatorResponseReport(ValidatorResponse[] errors, bool wrap_in_markdown_block = true)
+        {
+            var retVal = new StringBuilder();
+
+            if (wrap_in_markdown_block)
+                retVal.AppendLine($"```error{(errors.Length > 1 ? "s" : "")}");
+
+            foreach (var error in errors)
+                retVal.AppendLine($"{error.Severity}: {error.Description}");
+
+            if (wrap_in_markdown_block)
+                retVal.AppendLine("```");
+
+            return retVal.ToString();
+        }
+
+        private static ChatClientAgent CreateAgent_Writer(IChatClient client)
         {
 
             // TODO: make slightly different agents: one if an entire script is desired, one if just a function is desired
 
-            var writer = client.AsAIAgent(
+            return client.AsAIAgent(
                 instructions:
 @"You are an agent inside of a tool that generates python scripts.  The user prompt will be the desired name of the python script as well as a detailed description of what the script needs to do.
 
@@ -272,9 +361,10 @@ When writing the script, please think about edge cases, potential bugs, infinite
 Please only output the contents of the script that can be pasted directly into a python script (don't wrap in markdown), since your response will be used programatically",
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_WriterAgent");
-
-            var validator = client.AsAIAgent(
-                instructions:
+        }
+        private static ChatClientAgent CreateAgent_Validator(IChatClient client)
+        {
+            string prompt =
 @"You are an agent responsible for validating generated python scripts.
 
 The user prompt will be name and requirements of the script, as well as the script that was generated.
@@ -283,15 +373,58 @@ The script will already have passed static code analysis before it gets to you.
 
 Please examine the code for adherence to requirements, flaws in design, security holes, etc.  Think about possible values of each param, does the script account for odd values?  Does the script try to do more than what the requirements want?  Are there confusing pieces of code that could be simplified?
 
-Your response will be parsed programmatically, so either respond with:
-SUCCESS
+It's ok to return an empty list if the script has no issues";
 
-or with:
-ERROR: reason(s) for error",
+            prompt = StronglyTypedPromptHelper<ValidatorResponse[]>.AppendToPrompt(prompt);
+
+            return client.AsAIAgent(
+                instructions: prompt,
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_ValidatorAgent");
-
-            return (writer, validator);
         }
+        private static ChatClientAgent CreateAgent_RequirementRefiner(IChatClient client)
+        {
+            string prompt =
+@"There have been a couple attempts at generating a python script, but the validation agent is having problems.
+
+Please come up with improved requirements based on the original requirements and error reports.
+
+Also, please combine the sets of error messages into a single distinct list.";
+
+            prompt = StronglyTypedPromptHelper<PromptRefine>.AppendToPrompt(prompt);
+
+            return client.AsAIAgent(
+                instructions: prompt,
+                //tools: [],
+                name: $"{nameof(PythonWriter)}_RequirementRefiner");
+        }
+
+        #endregion
+
+        #region class: ValidatorResponse
+
+        public class ValidatorResponse
+        {
+            public IssueSeverity Severity { get; set; }
+            public string Description { get; set; }
+        }
+
+        public enum IssueSeverity
+        {
+            //Info,
+            Warning,
+            Error,
+        }
+
+        #endregion
+        #region class: PromptRefine
+
+        public class PromptRefine
+        {
+            public string NewPrompt { get; set; }
+            public ValidatorResponse[] SummarizedErrorList { get; set; }
+        }
+
+        #endregion
     }
 }

@@ -94,6 +94,46 @@ namespace MAFTesters_Core
             return retVal.ToString();
         }
 
+        /// <summary>
+        /// Removes the first "```block" line and corresponding final "```" line.
+        /// If there are more blocks inside the text, they will be untouched
+        /// </summary>
+        public static string RemoveOuterFence(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            // look for index of first and last ```
+            int firstIndex = text.IndexOf("```");
+            if (firstIndex == -1)
+                return text;
+
+            int lastIndex = text.LastIndexOf("\n```");
+            if (lastIndex < 0 || lastIndex < firstIndex)        // won't be equal, since there is \n
+                return text;
+
+            // Make sure these are the first and last non whitespace
+            if (!Regex.IsMatch(text.Substring(0, firstIndex), @"^\s*$"))        // TODO: make sure \s considers eol as blank
+                return text;
+
+            if (!Regex.IsMatch(text.Substring(lastIndex + 4), @"^\s*$"))
+                return text;
+
+            // Find the end of the first fence line (after the ``` characters)
+            int realLineIndex = text.IndexOf('\n', firstIndex + 3);
+            if (realLineIndex == lastIndex)
+                return "";      // fenced block with nothing inside
+
+            else if (realLineIndex < 0 || realLineIndex > lastIndex)
+                return text;
+
+            // Return everything after the eol of first ``` and before last ```
+            int contentStart = realLineIndex + 1;
+            int contentEnd = lastIndex;     // start at lastIndex, since it includes the \n in front of the ```
+
+            return text.Substring(contentStart, contentEnd - contentStart + 1);
+        }
+
         #region Private Methods
 
         private static (double score, string[] lines) ExtractBulletList_Block(Block block, double max_score, int max_words)
