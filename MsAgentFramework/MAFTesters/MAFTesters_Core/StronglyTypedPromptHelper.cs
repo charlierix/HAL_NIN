@@ -1,14 +1,10 @@
-﻿using Microsoft.Extensions.AI;
-using OllamaSharp;
-using OllamaSharp.Models.Chat;
-using System.Reflection.Metadata;
-using System.Runtime.Intrinsics.X86;
+﻿using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Workflows;
+using Microsoft.Extensions.AI;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
-using static Markdig.Helpers.StringLineGroup;
 
 namespace MAFTesters_Core
 {
@@ -22,22 +18,7 @@ namespace MAFTesters_Core
         /// </summary>
         public static string AppendToPrompt(string prompt)
         {
-            // Force Enums to strings and define global serialization rules
-            var options = new JsonSerializerOptions(JsonSerializerOptions.Default)
-            {
-                Converters = { new JsonStringEnumConverter() },
-                WriteIndented = true
-            };
-
-            // Configure the Exporter to be less verbose
-            var exporterOptions = new JsonSchemaExporterOptions
-            {
-                // Removes ["type", "null"] for non-nullable reference types (cleaner for LLMs)
-                TreatNullObliviousAsNonNullable = true
-            };
-
-            var schemaNode = JsonSchemaExporter.GetJsonSchemaAsNode(options, typeof(T), exporterOptions);
-            string schemaJson = schemaNode.ToJsonString(options);
+            string schemaJson = GetSchema();
 
             var retVal = new StringBuilder();
 
@@ -63,7 +44,7 @@ namespace MAFTesters_Core
         /// If there is a parse error and this is passed in, an agent will try to repair the json based on
         /// the error message
         /// </param>
-        public static T? ParseResponse(string response, bool throw_if_error = true, IChatClient client = null)
+        public static async Task<T?> ParseResponse(string response, bool throw_if_error = true, IChatClient client = null)
         {
             int retry_max = client == null ?
                 0 :
@@ -71,6 +52,7 @@ namespace MAFTesters_Core
 
             Exception lastException = null;
             string working_response = response;
+            ChatClientAgent agent = null;
 
             for (int i = 0; i <= retry_max; i++)        // using equal max, because iteration 0 is initial, not retry
             {
@@ -99,10 +81,11 @@ namespace MAFTesters_Core
                     if (client == null)
                         break;
 
-
                     // use an agent to try to repair the text
-                    //working_response = 
+                    if (agent == null)
+                        agent = CreateAgent_JSONCleaner(client);
 
+                    working_response = await RepairWithAgent(working_response, ex, agent);
                 }
             }
 
@@ -111,6 +94,8 @@ namespace MAFTesters_Core
             else
                 return default;
         }
+
+        #region Private Methods
 
         /// <summary>
         /// To properly escape JSON strings, we need to identify and escape all characters that are invalid in JSON strings, particularly
@@ -146,15 +131,6 @@ namespace MAFTesters_Core
             while (i < faulty_json.Length)
             {
                 char c = faulty_json[i];
-
-                string debug = sb.ToString();
-
-                if (debug.EndsWith("a valid integer."))
-                {
-
-                }
-
-
 
                 if (c == '"')
                 {
@@ -217,5 +193,78 @@ namespace MAFTesters_Core
             return sb.ToString();
         }
 
+        private static async Task<string> RepairWithAgent(string invalid_json, Exception ex, ChatClientAgent agent)
+        {
+            var prompt = new StringBuilder();
+
+            prompt.AppendLine("```schema");
+            prompt.AppendLine(GetSchema());
+            prompt.AppendLine("```");
+            prompt.AppendLine();
+            prompt.AppendLine("```error");
+            prompt.AppendLine(ex.Message);
+            prompt.AppendLine("```");
+            prompt.AppendLine();
+            prompt.AppendLine("```json");
+            prompt.AppendLine(invalid_json);
+            prompt.AppendLine("```");
+
+            var workflow = new WorkflowBuilder(agent).
+                WithOutputFrom(agent).
+                Build();
+
+            // Execute the workflow
+            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+
+            var response = await WorkflowEventListener.ListenToStream(run);
+
+            var retVal = response.GetSingleMessage("writer");
+
+            if (!retVal.IsSuccess)
+                return invalid_json;        // could throw an exception, but just let it loop around and try again
+
+            return retVal.Message;
+        }
+
+        private static string GetSchema()
+        {
+            // Force Enums to strings and define global serialization rules
+            var options = new JsonSerializerOptions(JsonSerializerOptions.Default)
+            {
+                Converters = { new JsonStringEnumConverter() },
+                WriteIndented = true
+            };
+
+            // Configure the Exporter to be less verbose
+            var exporterOptions = new JsonSchemaExporterOptions
+            {
+                // Removes ["type", "null"] for non-nullable reference types (cleaner for LLMs)
+                TreatNullObliviousAsNonNullable = true
+            };
+
+            var schemaNode = JsonSchemaExporter.GetJsonSchemaAsNode(options, typeof(T), exporterOptions);
+            return schemaNode.ToJsonString(options);
+        }
+
+        private static ChatClientAgent CreateAgent_JSONCleaner(IChatClient client)
+        {
+            string prompt =
+@"You are an agent responsible for cleaning invalid json files.
+
+There is a function that deserializes json, and if there is an exception, you'll get called.
+
+The user prompt will contain the expected schema, the json, and error message from deserialization.
+
+Please return a repaired json.  Please try to preserve data as well as you can.
+
+Your response will be directly deserialized, so the response should just be the repaired json";
+
+            return client.AsAIAgent(
+                instructions: prompt,
+                //tools: [],
+                name: $"RepairJSON");
+        }
+
+        #endregion
     }
 }

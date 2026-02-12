@@ -105,7 +105,7 @@ namespace MAFTesters_Core.Tools
             for (int i = 0; i < 12; i++)
             {
                 // Possibly refine the prompt if there have been errors
-                string script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, agent_requirement_refiner);
+                string script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, client, agent_requirement_refiner);
 
                 // Generate python
                 var script = await GetScriptContents(script_prompt, agent_writer);
@@ -126,7 +126,7 @@ namespace MAFTesters_Core.Tools
                 }
 
                 // Ask llm to look for issues
-                var python_error_msgs = await ValidatePythonContents(filename_escaped, requirements, script, agent_validator);
+                var python_error_msgs = await ValidatePythonContents(filename_escaped, requirements, script, client, agent_validator);
 
                 if (!python_error_msgs.Any(o => o.Severity == IssueSeverity.Error))
                 {
@@ -171,7 +171,7 @@ namespace MAFTesters_Core.Tools
 
         #region Private Methods - agent calls
 
-        private async Task<string> GetScriptPrompt(string script_name, string requirements, List<ValidatorResponse[]> error_history, ChatClientAgent agent)
+        private async Task<string> GetScriptPrompt(string script_name, string requirements, List<ValidatorResponse[]> error_history, IChatClient client, ChatClientAgent agent)
         {
             string new_requirements;
             string? error_summary = null;
@@ -185,7 +185,7 @@ namespace MAFTesters_Core.Tools
             }
             else
             {
-                var refined = await GetScriptPrompt_Refine(requirements, error_history, agent);
+                var refined = await GetScriptPrompt_Refine(requirements, error_history, client, agent);
                 if (refined == null)
                     throw new ApplicationException($"Couldn't cast refine call result to {nameof(PromptRefine)} object");
 
@@ -211,7 +211,7 @@ namespace MAFTesters_Core.Tools
 
             return prompt.ToString();
         }
-        private async Task<PromptRefine> GetScriptPrompt_Refine(string requirements, List<ValidatorResponse[]> error_history, ChatClientAgent agent)
+        private async Task<PromptRefine> GetScriptPrompt_Refine(string requirements, List<ValidatorResponse[]> error_history, IChatClient client, ChatClientAgent agent)
         {
             var prompt = new StringBuilder();
 
@@ -241,7 +241,7 @@ namespace MAFTesters_Core.Tools
                 throw new ApplicationException($"Had trouble calling prompt refiner: {refine_result.GetReport()}");
 
             // Cast to response objct
-            return StronglyTypedPromptHelper<PromptRefine>.ParseResponse(refine_result.Message);
+            return await StronglyTypedPromptHelper<PromptRefine>.ParseResponse(refine_result.Message, client: client);
         }
 
         private async Task<ResponseMessage> GetScriptContents(string prompt, ChatClientAgent agent)
@@ -269,7 +269,7 @@ namespace MAFTesters_Core.Tools
         }
 
         // Calls an agent to validate the python text, returns an error message or null
-        private async Task<ValidatorResponse[]> ValidatePythonContents(string script_name, string requirements, ResponseMessage source_code, ChatClientAgent agent)
+        private async Task<ValidatorResponse[]> ValidatePythonContents(string script_name, string requirements, ResponseMessage source_code, IChatClient client, ChatClientAgent agent)
         {
             string prompt =
 $@"filename: {script_name}
@@ -300,7 +300,7 @@ $@"filename: {script_name}
             else if (string.IsNullOrWhiteSpace(message.Message))
                 return [];
 
-            var validations = StronglyTypedPromptHelper<ValidatorResponse[]>.ParseResponse(message.Message);
+            var validations = await StronglyTypedPromptHelper<ValidatorResponse[]>.ParseResponse(message.Message, client: client);
 
             return validations;
         }
