@@ -6,9 +6,9 @@ namespace MAFTesters_Core
 {
     public record ResponseMessage
     {
+        public required bool IsSuccess { get; init; }
         public string? Message { get; init; }
         public string? ErrorMessage { get; init; }
-        public required bool IsSuccess { get; init; }
 
         public static ResponseMessage BuildSuccess(string message) =>
             new ResponseMessage { IsSuccess = true, Message = message };

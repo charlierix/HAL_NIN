@@ -51,7 +51,7 @@ namespace MAFTesters_Core.Tools
         // gets used over time, other overloads may be wanted with more specialized params
 
         [Description("Creates a python script that will satisfy the requirements.  This script could be for anything: complex math, analyze a file, etc.  Returns the filename that was created, or an error message")]
-        public Task<ResponseMessage> GeneratePythonScriptAsync(
+        public Task<PythonWriter_Response> GeneratePythonScriptAsync(
             [Description("What the python file should be called (the folder will be defined by the session, so only need filename, .py will automatically be added to the end of the filename)")]
             string desiredFilename,
             [Description("Details about what this script should do, expected parameters, what it should return")]
@@ -63,11 +63,11 @@ namespace MAFTesters_Core.Tools
             }
             catch (Exception ex)
             {
-                return Task.FromResult(ResponseMessage.BuildError($"Caught exception in python writer: {ex}"));
+                return Task.FromResult(PythonWriter_Response.BuildError($"Caught exception in python writer: {ex}"));
             }
         }
 
-        private async Task<ResponseMessage> GeneratePythonScript_private(string desiredFilename, string requirements)
+        private async Task<PythonWriter_Response> GeneratePythonScript_private(string desiredFilename, string requirements)
         {
             // Make sure there is a virtual environment
             PythonUtils.EnsurePythonFolderInitialized(_pythonFolder);
@@ -78,7 +78,9 @@ namespace MAFTesters_Core.Tools
                 FileSystemUtils.EscapeFilename_Linux(desiredFilename);
 
             // Put a number suffix if the proposed file already exists
-            var (filename, fullFilename) = FileSystemUtils.GetUniqueFilename(_pythonFolder, filename_escaped, "py");
+            var filename_base = FileSystemUtils.GetUniqueFilename(_pythonFolder, filename_escaped, "py", "md");
+            var filename_py = filename_base.GetFinalName("py");
+            var filename_md = filename_base.GetFinalName("md");
 
             // Create agents
             var client = _clientSettings.CreateClient();
@@ -98,24 +100,26 @@ namespace MAFTesters_Core.Tools
 
 
 
-
+            string script_prompt = "";
+            string script_contents = "";
             var error_history = new List<ValidatorResponse[]>();
             bool success = false;
 
             for (int i = 0; i < 12; i++)
             {
                 // Possibly refine the prompt if there have been errors
-                string script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, client, agent_requirement_refiner);
+                script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, client, agent_requirement_refiner);
 
                 // Generate python
                 var script = await GetScriptContents(script_prompt, agent_writer);
                 if (!script.IsSuccess)
-                    return script;
+                    return PythonWriter_Response.BuildError(script.ErrorMessage);
 
                 // Do static analysis of generated python
-                File.WriteAllText(fullFilename, script.Message);
+                script_contents = script.Message;
+                File.WriteAllText(filename_py.full_path, script.Message);
 
-                string? lint_error = PythonUtils.CheckForErrors(_pythonFolder, filename);
+                string? lint_error = PythonUtils.CheckForErrors(_pythonFolder, filename_py.name_nofolder);
 
                 // if this is a partial file, delete it
 
@@ -134,7 +138,7 @@ namespace MAFTesters_Core.Tools
                     break;
                 }
 
-                File.Delete(fullFilename);
+                File.Delete(filename_py.full_path);
 
                 error_history.Add(python_error_msgs);
             }
@@ -165,8 +169,15 @@ namespace MAFTesters_Core.Tools
 
 
 
+            // Generate a markdown that documents the script
+            var agent_documenter = CreateAgent_Documentation(client);
 
-            return ResponseMessage.BuildSuccess(fullFilename);
+            string documentation = await DocumentScript(requirements, script_prompt, script_contents, agent_documenter);
+            if(documentation != null)
+                File.WriteAllText(filename_md.full_path, documentation);
+
+
+            return PythonWriter_Response.BuildSuccess(filename_py.full_path, filename_md.full_path);
         }
 
         #region Private Methods - agent calls
@@ -235,7 +246,7 @@ namespace MAFTesters_Core.Tools
             var response = await WorkflowEventListener.ListenToStream(run);
 
             // Get the response text
-            var refine_result = response.GetSingleMessage("prompt refiner");
+            var refine_result = response.GetSingleMessage(agent.Name);
 
             if (!refine_result.IsSuccess)
                 throw new ApplicationException($"Had trouble calling prompt refiner: {refine_result.GetReport()}");
@@ -256,7 +267,7 @@ namespace MAFTesters_Core.Tools
             var response = await WorkflowEventListener.ListenToStream(run);
 
             // Get the response text
-            var retVal = response.GetSingleMessage("writer");
+            var retVal = response.GetSingleMessage(agent.Name);
 
             if (!retVal.IsSuccess)
                 return retVal;
@@ -291,7 +302,7 @@ $@"filename: {script_name}
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
-            var message = response.GetSingleMessage("validator");
+            var message = response.GetSingleMessage(agent.Name);
             if (!message.IsSuccess)
                 return string.IsNullOrWhiteSpace(message.ErrorMessage) ?
                     [new ValidatorResponse { Severity = IssueSeverity.Error, Description = "No response back from the python validator" }] :
@@ -305,10 +316,53 @@ $@"filename: {script_name}
             return validations;
         }
 
+        private async Task<string> DocumentScript(string requirements, string script_prompt, string script_contents, ChatClientAgent agent)
+        {
+            var prompt = new StringBuilder();
+
+            prompt.AppendLine(script_prompt);       // see GetScriptPrompt(), it already includes filename, new requirements, error list
+
+            if (requirements != script_prompt)
+            {
+                // Since these are different, add the original requirements
+                prompt.AppendLine();
+                prompt.AppendLine("```original_requirements");
+                prompt.AppendLine(requirements);
+                prompt.AppendLine("```");
+            }
+
+            var workflow = new WorkflowBuilder(agent).
+                WithOutputFrom(agent).
+                Build();
+
+            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+
+            var response = await WorkflowEventListener.ListenToStream(run);
+
+            var message = response.GetSingleMessage(agent.Name);
+
+            if (!message.IsSuccess || string.IsNullOrWhiteSpace(message.Message))
+                return null;
+
+            var retVal = new StringBuilder();
+
+            retVal.AppendLine(MarkdownParser.RemoveOuterFence(message.Message));
+
+            retVal.AppendLine();
+            retVal.AppendLine();
+            retVal.AppendLine("# Prompts");
+            retVal.AppendLine("These are snippets that were passed to the generator when making the script");
+            retVal.AppendLine();
+            retVal.AppendLine();
+            retVal.AppendLine(prompt.ToString());
+
+            return retVal.ToString();
+        }
+
         #endregion
         #region Private Methods
 
-        private static ResponseMessage BuildRetryHistoryErrorResponse(string requirements, List<ValidatorResponse[]> error_history)
+        private static PythonWriter_Response BuildRetryHistoryErrorResponse(string requirements, List<ValidatorResponse[]> error_history)
         {
             var report = new StringBuilder();
 
@@ -324,7 +378,7 @@ $@"filename: {script_name}
                 report.AppendLine(GetValidatorResponseReport(run));
             }
 
-            return ResponseMessage.BuildError(report.ToString());
+            return PythonWriter_Response.BuildError(report.ToString());
         }
 
         private static string GetValidatorResponseReport(ValidatorResponse[] errors, bool wrap_in_markdown_block = true)
@@ -398,6 +452,36 @@ Also, please combine the sets of error messages into a single distinct list.";
                 //tools: [],
                 name: $"{nameof(PythonWriter)}_RequirementRefiner");
         }
+        private static ChatClientAgent CreateAgent_Documentation(IChatClient client)
+        {
+            string prompt =
+@"You are an agent that needs to document a generated python script.
+
+You will get several items in the input prompt:
+- filename of the python script
+- original requirements
+- possibly refined requirements based on previous attempts
+- possibly error list from previous attempts
+- the generated python
+
+Your output will be markdown that will be directly saved into a .md file.
+
+The items passed to you will also be added to the end of the markdown that you respond with, so there's no need for you to include any of that.
+
+Please don't add any conversation, this will be used as documentation for the script.
+
+Sections for you to respond with:
+- Title and brief description
+- Detailed description of input params
+- Detailed description of either return value or expected console output
+- Use cases of the script
+- Any limitations or warnings about how the script may be misused (possible wrong assumptions that could be made about the script)";
+
+            return client.AsAIAgent(
+                instructions: prompt,
+                //tools: [],
+                name: $"{nameof(PythonWriter)}_DocumentationAgent");
+        }
 
         #endregion
 
@@ -427,4 +511,36 @@ Also, please combine the sets of error messages into a single distinct list.";
 
         #endregion
     }
+
+    #region record: PythonWriter_Response
+
+    public record PythonWriter_Response
+    {
+        public required bool IsSuccess { get; init; }
+
+        public string? ErrorMessage { get; init; }
+
+        public string? Python_FullFilenamePath { get; init; }
+        public string? MarkdownDocumentation_FullFilenamePath { get; init; }
+
+        public static PythonWriter_Response BuildSuccess(string python_filename, string documentation_filename)
+        {
+            return new PythonWriter_Response
+            {
+                IsSuccess = true,
+                Python_FullFilenamePath = python_filename,
+                MarkdownDocumentation_FullFilenamePath = documentation_filename,
+            };
+        }
+        public static PythonWriter_Response BuildError(string error_message)
+        {
+            return new PythonWriter_Response
+            {
+                IsSuccess = false,
+                ErrorMessage = error_message,
+            };
+        }
+    }
+
+    #endregion
 }

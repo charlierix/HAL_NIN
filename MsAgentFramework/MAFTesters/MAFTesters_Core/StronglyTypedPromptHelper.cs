@@ -218,7 +218,7 @@ namespace MAFTesters_Core
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
-            var retVal = response.GetSingleMessage("writer");
+            var retVal = response.GetSingleMessage(agent.Name);
 
             if (!retVal.IsSuccess)
                 return invalid_json;        // could throw an exception, but just let it loop around and try again
@@ -256,6 +256,8 @@ There is a function that deserializes json, and if there is an exception, you'll
 The user prompt will contain the expected schema, the json, and error message from deserialization.
 
 Please return a repaired json.  Please try to preserve data as well as you can.
+
+Most errors will probably be related to unescaped double quotes insde a string value, or strings instead of numbers.
 
 Your response will be directly deserialized, so the response should just be the repaired json";
 

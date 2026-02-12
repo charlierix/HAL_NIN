@@ -162,38 +162,38 @@ namespace MAFTesters_Core
         }
 
         /// <summary>
-        /// This will try the filename passed in.  If that already exists, it will add _digit
-        /// WARNING: If there are multiple threads/processes using this same method on the same file, they'll all get the same
+        /// This will try the filenames passed in.  If that already exists, it will add _digit
+        /// WARNING: If there are multiple threads/processes using this same method on the same files, they'll all get the same
         /// "unique" name.  If you want to guarantee unique, have this return a filestream that was opened with createnew
         /// </summary>
         /// <remarks>
         /// copied from party people UtilityCore
+        /// 
+        /// This will make sure the same base name is used for all extensions passed in
+        /// 
+        /// example: "hello", "txt", "md"
+        /// if hello.txt doesn't exist, but hello.md does, this will tack on a number and return hello_1.txt and hello_1.md
         /// </remarks>
-        public static (string name_nofolder, string full_path) GetUniqueFilename(string folder, string filename, string extension)
+        public static UniqueFilenameResponse GetUniqueFilename(string folder, string filename, params string[] extensions)
         {
-            // 1. Normalize folder: use it as-is if non-empty, default to current directory
+            // Normalize folder: use it as-is if non-empty, default to current directory
             folder = !string.IsNullOrEmpty(folder) ?
                 folder :
                 ".";
 
-            // 2. Normalize the extension by ensuring it starts with a period
-            string? normalizedExtension = string.IsNullOrEmpty(extension) ? null :
-                (extension.StartsWith(".") ? extension : "." + extension);
+            // Normalize the extensions by ensuring they start with a period
+            string[] normalizedExtensions = GetNormalizedExtensions(extensions);
 
-            // 3. If an extension is provided, split filename into base and extension
-            string baseName = filename;
-            if (!string.IsNullOrEmpty(normalizedExtension))
-            {
-                if (filename.EndsWith(normalizedExtension, StringComparison.OrdinalIgnoreCase))
-                    baseName = filename.Substring(0, filename.Length - normalizedExtension.Length);
-            }
+            // If extensions are provided and filename ends in one of them, set baseName equal to the portion in front
+            // of that extension
+            string baseName = GetBaseName(filename, normalizedExtensions);
 
-            // 4. Uniqueness: increment counter until a unique file is found
+            // Uniqueness: increment counter until a unique file is found
             int counter = 0;
             string uniqueName;
-            string uniquePath;
+            string path_uniqueName;
 
-            do
+            while (true)
             {
                 counter++;
 
@@ -201,12 +201,81 @@ namespace MAFTesters_Core
                     baseName :
                     $"{baseName}_{counter}";
 
-                uniqueName += normalizedExtension ?? "";
+                path_uniqueName = Path.Combine(folder, uniqueName);
 
-                uniquePath = Path.Combine(folder, uniqueName);
-            } while (File.Exists(uniquePath));
+                if (!normalizedExtensions.Any(o => File.Exists(path_uniqueName + o)))
+                    break;
+            }
 
-            return (uniqueName, uniquePath);
+            return new UniqueFilenameResponse
+            {
+                full_path = path_uniqueName,
+                name_nofolder = uniqueName,
+            };
+        }
+
+        #region Private Methods
+
+        private static string[] GetNormalizedExtensions(string[] extensions)
+        {
+            if (extensions == null || extensions.Length == 0)
+                return [];
+
+            var retVal = new List<string>();
+
+            foreach (string extension in extensions)
+            {
+                if (string.IsNullOrWhiteSpace(extension))
+                    continue;
+
+                retVal.Add(extension.StartsWith(".") ? extension : "." + extension);
+            }
+
+            return retVal.ToArray();
+        }
+
+        private static string GetBaseName(string filename, string[] extensions)
+        {
+            if (extensions.Length == 0)
+                return filename;
+
+            foreach (string extension in extensions)
+            {
+                if (filename.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                    return filename.Substring(0, filename.Length - extension.Length);
+            }
+
+            return filename;
+        }
+
+        #endregion
+    }
+
+    #region record: UniqueFilenameResponse
+
+    public record UniqueFilenameResponse
+    {
+        public string name_nofolder { get; init; }
+        public string full_path { get; init; }
+
+        /// <summary>
+        /// This function assumes the instance is the base name without extenstion and return an instance with
+        /// extension applied.  it makes sure that there is a period before extention ("txt" passed in turns
+        /// into ".txt"
+        /// </summary>
+        public UniqueFilenameResponse GetFinalName(string extension)
+        {
+            string final_extension = extension.StartsWith(".") ?
+                extension :
+                "." + extension;
+
+            return new UniqueFilenameResponse
+            {
+                name_nofolder = name_nofolder + final_extension,
+                full_path = full_path + final_extension,
+            };
         }
     }
+
+    #endregion
 }
