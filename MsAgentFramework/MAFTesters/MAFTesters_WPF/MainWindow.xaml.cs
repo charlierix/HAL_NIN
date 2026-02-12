@@ -85,7 +85,7 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private async void PythonWriter2_Click(object sender, RoutedEventArgs e)
+        private async void PythonWriter_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -100,10 +100,10 @@ namespace MAFTesters_WPF
 
                 // Convert the function into a tool
                 var pythonFunction = AIFunctionFactory.Create(
-                    typeof(PythonWriter2).GetMethod(nameof(PythonWriter2.GeneratePythonScriptAsync)),      // reflection pointing to the function that will get invoked
+                    typeof(PythonWriter).GetMethod(nameof(PythonWriter.GeneratePythonScriptAsync)),      // reflection pointing to the function that will get invoked
                     (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
                     {
-                        return new PythonWriter2(sessionArgs.PythonFolder, true, clientSettings);
+                        return new PythonWriter(sessionArgs.PythonFolder, true, clientSettings);
                     });
 
                 // Invoke the tool directly to test it

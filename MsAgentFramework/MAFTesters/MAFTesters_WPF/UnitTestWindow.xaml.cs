@@ -68,7 +68,7 @@ def get_log_folder():
             {
                 string prompt1 = "do what feels good";
 
-                string prompt2 = StronglyTypedPromptHelper<PythonWriter2.ValidatorResponse[]>.AppendToPrompt(prompt1);
+                string prompt2 = StronglyTypedPromptHelper<PythonWriter.ValidatorResponse[]>.AppendToPrompt(prompt1);
 
             }
             catch (Exception ex)
@@ -156,7 +156,7 @@ def get_log_folder():
 }
 ```";
 
-                var result = StronglyTypedPromptHelper<PythonWriter2.PromptRefine>.ParseResponse(json);
+                var result = StronglyTypedPromptHelper<PythonWriter.PromptRefine>.ParseResponse(json);
 
             }
             catch (Exception ex)

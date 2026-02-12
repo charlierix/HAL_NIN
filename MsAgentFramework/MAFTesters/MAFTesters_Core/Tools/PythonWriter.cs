@@ -34,13 +34,13 @@ namespace MAFTesters_Core.Tools
     // grows
 
 
-    public class PythonWriter2
+    public class PythonWriter
     {
         private readonly string _pythonFolder;
         private readonly bool _is_windows;
         private readonly ClientSettings _clientSettings;
 
-        public PythonWriter2(string pythonFolder, bool is_windows, ClientSettings clientSettings)
+        public PythonWriter(string pythonFolder, bool is_windows, ClientSettings clientSettings)
         {
             _pythonFolder = pythonFolder;
             _is_windows = is_windows;
