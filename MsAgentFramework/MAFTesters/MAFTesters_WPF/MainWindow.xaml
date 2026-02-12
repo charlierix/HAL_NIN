@@ -30,7 +30,6 @@
                 <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
                         <Button Content="weather example" Click="WeatherExample_Click"/>
-                        <Button Content="python writer" Click="PythonWriter_Click"/>
                         <Button Content="python writer2" Click="PythonWriter2_Click"/>
 
                         <Expander Header="MS Examples" Margin="0,8,0,0" IsExpanded="True">

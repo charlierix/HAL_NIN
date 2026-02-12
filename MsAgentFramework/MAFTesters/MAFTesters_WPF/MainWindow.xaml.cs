@@ -85,53 +85,6 @@ namespace MAFTesters_WPF
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private void PythonWriter_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var clientSettings = GetOllamaValues();
-                if (clientSettings == null)
-                {
-                    MessageBox.Show("Please select a model", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                var sessionArgs = GetSessionArgs();
-
-                var client = clientSettings.CreateClient();
-
-                // Convert the function into a tool
-                var pythonFunction = AIFunctionFactory.Create(
-                    typeof(PythonWriter).GetMethod(nameof(PythonWriter.GeneratePythonScript)),      // reflection pointing to the function that will get invoked
-                    (args) =>       // whenever the tool needs to be used, this delegate creates an instance, giving extra session info to the tool
-                    {
-                        var agents = PythonWriter.CreateAgents(client);
-                        return new PythonWriter(sessionArgs.PythonFolder, agents.writer, agents.validator, true);
-                    });
-
-
-                // let's see what the agents see
-                string name = pythonFunction.Name;      // this is the function name: GeneratePythonScript
-                string description = pythonFunction.Description;        // this is the contents of the description attribute over the function [Description(...)]
-                var schema = pythonFunction.JsonSchema;
-                var return_schema = pythonFunction.ReturnJsonSchema;
-
-
-                // Invoke the tool directly to test it
-                var tool_args = new AIFunctionArguments();
-                tool_args.Add("desiredFilename", $"{DateTime.Now:yyyyMMdd HHmmss} writer test.py");
-                tool_args.Add("requirements", "What is the 32nd number in the fibonacci sequence?");
-
-                var result = pythonFunction.InvokeAsync(tool_args);
-
-                var temp = result.Result;
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
         private async void PythonWriter2_Click(object sender, RoutedEventArgs e)
         {
             try
