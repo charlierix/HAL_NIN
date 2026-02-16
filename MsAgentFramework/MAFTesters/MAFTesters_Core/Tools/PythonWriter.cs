@@ -15,15 +15,10 @@ namespace MAFTesters_Core.Tools
     // whole thing, or if each component needs to break into sub components
 
 
-    // TODO: make this return an object
-    //  error message about why it failed
-    //  generated python script filename
-    //  markdown filename - this contains requirements, struggles.  it can be mined by some other process that looks for groups of similar scripts to turn into more robust tools
-    //
+    // TODO: make a way to track usage
     // another 'file' that could be useful is a usage tracker (probably a db).  every time one of these scripts is used, a log
     // entry is made.  maybe not full input, but a score if it works as expected.  if there was an error, store a bug report with
     // inputs and outcome
-
 
 
     // TODO: it's outside the scope of this tool, but a caller tool could try to break the problem down...this tool builds the code
@@ -32,6 +27,11 @@ namespace MAFTesters_Core.Tools
     // another approach is how this tool was written:  get one piece working and tested, then add functionality.  basically growing
     // the code from an initial simplified requirement, then adding requirements and rewriting, always satisfying unit tests as it
     // grows
+
+    // NOTE: PythonWriter and PythonRunner aren't meant for top level agents, they should be used by a more generic PythonTool.  It
+	// would know about existing generated python, confidence scores.
+	//	- if it can't find anything at all, then create python from scratch
+	//	- if it finds something close, then create an alternate or expanded version
 
 
     public class PythonWriter
@@ -105,7 +105,7 @@ namespace MAFTesters_Core.Tools
             var error_history = new List<ValidatorResponse[]>();
             bool success = false;
 
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < 24; i++)
             {
                 // Possibly refine the prompt if there have been errors
                 script_prompt = await GetScriptPrompt(filename_escaped, requirements, error_history, client, agent_requirement_refiner);
@@ -173,8 +173,14 @@ namespace MAFTesters_Core.Tools
             var agent_documenter = CreateAgent_Documentation(client);
 
             string documentation = await DocumentScript(requirements, script_prompt, script_contents, agent_documenter);
-            if(documentation != null)
+            if (documentation != null)
                 File.WriteAllText(filename_md.full_path, documentation);
+
+
+
+            // Generate a file full of suggested unit tests
+
+
 
 
             return PythonWriter_Response.BuildSuccess(filename_py.full_path, filename_md.full_path);
