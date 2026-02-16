@@ -13,4 +13,8 @@
     <PackageReference Include="OllamaSharp" Version="5.4.16" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MAFTesters_PythonSandboxMockService\MAFTesters_PythonSandboxMockService.csproj" />
+  </ItemGroup>
+
 </Project>

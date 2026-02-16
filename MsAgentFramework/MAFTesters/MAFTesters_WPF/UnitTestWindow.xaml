@@ -6,13 +6,25 @@
         xmlns:local="clr-namespace:MAFTesters_WPF"
         Title="Unit Tests" ResizeMode="CanResizeWithGrip" Background="{x:Static SystemColors.ControlBrush}" Width="800" Height="600">
     <Grid Margin="8">
-        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="auto"/>
+        </Grid.ColumnDefinitions>
+        
+        <StackPanel Grid.Column="0">
             <Button Content="ensure venv" Click="EnsureVenv_Click"/>
             <Button Content="pyflakes" Click="PyFlakes_Click"/>
             <Button Content="parse markdown" Click="ParseMarkdown_Click"/>
             <Button Content="get json schema" Click="GetJSONSchema_Click"/>
             <Button Content="deserialize loose json" Click="DeserializeLooseJSON_Click"/>
             <Button Content="remove outer fence" Click="RemoveOuterFence_Click"/>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+            <Label Content="DOCKER"/>
+            <Button Content="add/remove session" Click="Docker_AddRemoveSession_Click"/>
+
         </StackPanel>
     </Grid>
 </Window>

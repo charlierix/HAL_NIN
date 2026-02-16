@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MAFTesters_Core\MAFTesters_Core.csproj" />
+    <ProjectReference Include="..\MAFTesters_PythonSandboxMockService\MAFTesters_PythonSandboxMockService.csproj" />
   </ItemGroup>
 
 </Project>

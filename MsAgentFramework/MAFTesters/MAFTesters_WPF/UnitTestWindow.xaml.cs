@@ -1,5 +1,6 @@
 ﻿using MAFTesters_Core;
 using MAFTesters_Core.Tools;
+using MAFTesters_PythonSandboxMockService;
 using System.IO;
 using System.Windows;
 
@@ -302,6 +303,22 @@ def get_log_folder():
                     ToArray();
 
 
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void Docker_AddRemoveSession_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string session_name = "unit test add/remove session";
+
+                var add_response = await PythonSandboxMockService.NewSession(session_name);
+
+                var remove_response = await PythonSandboxMockService.RemoveSession(session_name);
             }
             catch (Exception ex)
             {

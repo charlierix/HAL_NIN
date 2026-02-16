@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="MAFTesters_Core/MAFTesters_Core.csproj" Id="fa3550f7-3e45-44a8-b20c-3c24d95666a1" />
+  <Project Path="MAFTesters_PythonSandboxMockService/MAFTesters_PythonSandboxMockService.csproj" Id="0339f1ae-0839-4a5f-8648-6fde3ffe37e1" />
   <Project Path="MAFTesters_WPF/MAFTesters_WPF.csproj" />
 </Solution>
