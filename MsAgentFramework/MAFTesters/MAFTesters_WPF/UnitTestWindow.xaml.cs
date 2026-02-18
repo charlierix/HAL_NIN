@@ -1,6 +1,7 @@
 ﻿using MAFTesters_Core;
 using MAFTesters_Core.Tools;
 using MAFTesters_PythonSandboxMockService;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 
@@ -8,9 +9,28 @@ namespace MAFTesters_WPF
 {
     public partial class UnitTestWindow : Window
     {
+        private record DockerSessionArgs
+        {
+            public string Folder { get; init; }
+        }
+
         public UnitTestWindow()
         {
             InitializeComponent();
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                // Use Process.Start to open the URI in the default web browser
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void EnsureVenv_Click(object sender, RoutedEventArgs e)
@@ -310,10 +330,27 @@ def get_log_folder():
             }
         }
 
+        private async void Docker_Init_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var args = GetDockerSessionArgs();
+
+                await PythonSandboxMockService.Init(args.Folder);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
         private async void Docker_AddRemoveSession_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                var args = GetDockerSessionArgs();
+
+                await PythonSandboxMockService.Init(args.Folder);
+
                 string session_name = "unit test add/remove session";
 
                 var add_response = await PythonSandboxMockService.NewSession(session_name);
@@ -324,6 +361,17 @@ def get_log_folder():
             {
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private DockerSessionArgs GetDockerSessionArgs()
+        {
+            if (!Directory.Exists(txtFolder.Text))
+                throw new ApplicationException($"Docker folder doesn't exist: {txtFolder.Text}");
+
+            return new DockerSessionArgs
+            {
+                Folder = txtFolder.Text,
+            };
         }
     }
 }

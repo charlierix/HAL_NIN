@@ -23,8 +23,32 @@
 
         <StackPanel Grid.Column="2">
             <Label Content="DOCKER"/>
-            <Button Content="add/remove session" Click="Docker_AddRemoveSession_Click"/>
+            <Expander Header="settings" IsExpanded="True">
+                <StackPanel Margin="0,0,0,24">
+                    <Label Content="folder"/>
+                    <TextBox x:Name="txtFolder" Text="D:\temp\agent tests"/>
+                    <Label Content="docker tag" Margin="0,4,0,0"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock>
+                            <Hyperlink NavigateUri="https://hub.docker.com/_/python" RequestNavigate="Hyperlink_RequestNavigate">
+                                docker list
+                            </Hyperlink>
+                        </TextBlock>
 
+                        <TextBlock Margin="8,0,0,0">
+                            <Hyperlink NavigateUri="https://github.com/docker-library/python/blob/ce782e2435387d50d3a21a29c76d0eb4115057d3/3.12/slim-bookworm/Dockerfile" RequestNavigate="Hyperlink_RequestNavigate">
+                                github (slim 3.12)
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                    <TextBox x:Name="txtDockerTag" Text="python:3.12-slim"/>
+
+
+                    <Button Content="init" Margin="0,8,0,0" Click="Docker_Init_Click"/>
+                </StackPanel>
+            </Expander>
+            
+            <Button Content="add/remove session" Click="Docker_AddRemoveSession_Click"/>
         </StackPanel>
     </Grid>
 </Window>
