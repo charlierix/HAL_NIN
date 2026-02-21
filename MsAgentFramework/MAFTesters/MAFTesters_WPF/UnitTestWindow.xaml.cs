@@ -12,6 +12,7 @@ namespace MAFTesters_WPF
         private record DockerSessionArgs
         {
             public string Folder { get; init; }
+            public string DockerImageTag { get; init; }
         }
 
         public UnitTestWindow()
@@ -336,7 +337,22 @@ def get_log_folder():
             {
                 var args = GetDockerSessionArgs();
 
-                await PythonSandboxMockService.Init(args.Folder);
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void Docker_GetSessions_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var args = GetDockerSessionArgs();
+
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
+
+                var list = await PythonSandboxMockService.GetSessionList();
             }
             catch (Exception ex)
             {
@@ -349,7 +365,7 @@ def get_log_folder():
             {
                 var args = GetDockerSessionArgs();
 
-                await PythonSandboxMockService.Init(args.Folder);
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
 
                 string session_name = "unit test add/remove session";
 
@@ -368,9 +384,13 @@ def get_log_folder():
             if (!Directory.Exists(txtFolder.Text))
                 throw new ApplicationException($"Docker folder doesn't exist: {txtFolder.Text}");
 
+            if (txtDockerTag.Text.Trim() == "")
+                throw new ApplicationException($"Docker Tag is blank");
+
             return new DockerSessionArgs
             {
                 Folder = txtFolder.Text,
+                DockerImageTag = txtDockerTag.Text,
             };
         }
     }

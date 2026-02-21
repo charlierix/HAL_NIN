@@ -26,7 +26,7 @@
             <Expander Header="settings" IsExpanded="True">
                 <StackPanel Margin="0,0,0,24">
                     <Label Content="folder"/>
-                    <TextBox x:Name="txtFolder" Text="D:\temp\agent tests"/>
+                    <TextBox x:Name="txtFolder" Text="D:\temp\agent tests\docker"/>
                     <Label Content="docker tag" Margin="0,4,0,0"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock>
@@ -43,11 +43,11 @@
                     </StackPanel>
                     <TextBox x:Name="txtDockerTag" Text="python:3.12-slim"/>
 
-
                     <Button Content="init" Margin="0,8,0,0" Click="Docker_Init_Click"/>
                 </StackPanel>
             </Expander>
-            
+
+            <Button Content="get session list" Click="Docker_GetSessions_Click"/>
             <Button Content="add/remove session" Click="Docker_AddRemoveSession_Click"/>
         </StackPanel>
     </Grid>

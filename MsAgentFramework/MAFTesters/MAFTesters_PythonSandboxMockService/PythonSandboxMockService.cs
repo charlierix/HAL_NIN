@@ -1,7 +1,4 @@
 ﻿using MAFTesters_PythonSandboxMockService.Models_Endpoints;
-using Microsoft.Data.Sqlite;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace MAFTesters_PythonSandboxMockService
 {
@@ -21,12 +18,13 @@ namespace MAFTesters_PythonSandboxMockService
 
         private string _base_folder;
         private string _dbPath;
+        private string _docker_image_tag;
 
         private static Lazy<PythonSandboxMockService> _instance = new Lazy<PythonSandboxMockService>();
 
         #endregion
 
-        public static async Task Init(string base_folder)
+        public static async Task Init(string base_folder, string docker_image_tag)
         {
             // base folder
             //  make a sqlite db for settings
@@ -39,71 +37,140 @@ namespace MAFTesters_PythonSandboxMockService
 
             lock (instance._lock)
             {
+                if (instance._base_folder != null && instance._base_folder != base_folder)
+                    throw new ArgumentException($"Init has already been called with a different base folder.  existing: '{instance._base_folder}', new arg: {base_folder}");
+
                 instance._base_folder = base_folder;
                 instance._dbPath = Path.Combine(base_folder, "settings.db");
-
-
-                // don't need to use db until requests come in
-                //// Connect to the SQLite database (creates file if missing)
-                //using SqliteConnection connection = new SqliteConnection($"Data Source={instance._dbPath}");
-                //connection.Open();
-
-
-                //    // Create the Settings table if it doesn't exist
-                //    string createTableQuery = @"
-                //CREATE TABLE IF NOT EXISTS Settings (
-                //    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                //    Key TEXT NOT NULL UNIQUE,
-                //    Value TEXT,
-                //    CreatedAt TEXT,
-                //    UpdatedAt TEXT
-                //)";
-
-                //    using SqliteCommand command = new SqliteCommand(createTableQuery, connection);
-                //    command.ExecuteNonQuery();
-
-                //    Console.WriteLine("Database and table initialized successfully.");
-
-
+                instance._docker_image_tag = docker_image_tag;      // don't do anything with this until they make a new session (no point building images that never get used if there are multiple version changes between sessions)
             }
         }
 
+        public static async Task<SessionList_Response> GetSessionList()
+        {
+            try
+            {
+                string db_path = null;
+                var instance = _instance.Value;
+                lock (instance._lock)
+                    db_path = instance._dbPath;
+
+                if (db_path == null)
+                    return await Task.FromResult(new SessionList_Response
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Need to call Init() first",
+                    });
+
+                var sessions_db = await DAL.GetSessions(db_path);
+
+
+                // TODO: also get folders/python scripts from each session's working folder
+                // if db thinks a session exists, but it's not out in the base folder, mark it as errored/orphaned
+
+
+                var sessions_respone = (sessions_db ?? []).
+                    Select(o => new SessionEntry
+                    {
+                        Name = o.Name,
+                        Key = o.Key,
+                        CreateDate = o.CreateDate,
+                        LastModifyDate = o.LastModifyDate,
+                    }).
+                    ToArray();
+
+                return await Task.FromResult(new SessionList_Response
+                {
+                    IsSuccess = true,
+                    Sessions = sessions_respone,
+                });
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(new SessionList_Response
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"Caught exception in GetSessionList: {ex}",
+                });
+            }
+        }
+
+        public static async Task<SessionAddRemove_Response> GetOrCreateSession(string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError("name passed in is blank"));
+
+                // Get session list
+                var existing = await GetSessionList();
+                if (!existing.IsSuccess)
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError(existing.ErrorMessage));
+
+                // Find name, trim, case insensitive
+                var match = FindSession(name, existing.Sessions);
+
+                if (match != null)
+                    return await Task.FromResult(SessionAddRemove_Response.BuildSuccess(match.Key, match.Name));
+
+                // It doesn't exist, create a new one
+                return await NewSession_Create(name);
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"Caught exception in GetOrCreateSession: {ex}"));
+            }
+        }
         public static async Task<SessionAddRemove_Response> NewSession(string name)
         {
-            string latest_image_tag = await GetLatestPythonSlimTag();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError("name passed in is blank"));
 
+                // Make sure there isn't an existing session with that name
+                var existing = await GetSessionList();
+                if (!existing.IsSuccess)
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError(existing.ErrorMessage));
 
+                var match = FindSession(name, existing.Sessions);
 
+                if (match != null)
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError($"session already exists.  key: {match.Key}, name: {match.Name}"));
 
-
-
+                // It doesn't exist, create a new one
+                return await NewSession_Create(name);
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"Caught exception in GetOrCreateSession: {ex}"));
+            }
+        }
+        public static async Task<SessionAddRemove_Response> RemoveSession(string session_key)
+        {
             return await Task.FromResult(SessionAddRemove_Response.BuildError("finish this"));
         }
-        public static Task<SessionAddRemove_Response> RemoveSession(string id)
-        {
-            return Task.FromResult(SessionAddRemove_Response.BuildError("finish this"));
-        }
 
-        public static Task<SessionFolder_Response> AddFolder(string id, string path)
+        public static async Task<SessionFolder_Response> AddFolder(string session_key, string path)
         {
-            return Task.FromResult(new SessionFolder_Response
+            return await Task.FromResult(new SessionFolder_Response
             {
                 IsSuccess = false,
                 ErrorMessage = "finish this",
             });
         }
 
-        public static Task<Script_Response> RunNewScript(string id, string script_name, string script_contents)
+        public static async Task<Script_Response> RunNewScript(string session_key, string script_name, string script_contents)
         {
-            return Task.FromResult(new Script_Response
+            return await Task.FromResult(new Script_Response
             {
                 IsSuccess = false,
                 ErrorMessage = "finish this",
             });
         }
-        public static Task<Script_Response> RunExistingScript()
+        public static async Task<Script_Response> RunExistingScript()
         {
-            return Task.FromResult(new Script_Response
+            return await Task.FromResult(new Script_Response
             {
                 IsSuccess = false,
                 ErrorMessage = "finish this",
@@ -112,98 +179,29 @@ namespace MAFTesters_PythonSandboxMockService
 
         #region Private Methods
 
-        private static async Task<string> GetLatestPythonSlimTag()
+        private static SessionEntry? FindSession(string name, SessionEntry[] sessions)
         {
-            try
-            {
-                using HttpClient client = new HttpClient();
+            if (sessions == null || sessions.Length == 0)
+                return null;
 
-                string path = "https://hub.docker.com/v2/repositories/python/tags/";
+            string name_trimmed = name.Trim();
 
-                HttpResponseMessage response = await client.GetAsync(path);
-                response.EnsureSuccessStatusCode();
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-
-
-
-
-                return await Task.FromResult("finish this");
-            }
-            catch (Exception ex)
-            {
-                return await Task.FromResult((string)null);
-            }
+            return sessions.FirstOrDefault(o => o.Name.Trim().Equals(name_trimmed, StringComparison.OrdinalIgnoreCase));
         }
 
-        /*
-        private static async Task<string> GetLatestPythonSlimTag()
+        private static async Task<SessionAddRemove_Response> NewSession_Create(string name)
         {
-            try
-            {
-                using (HttpClient client = new HttpClient())
-                {
-                    client.UserAgent.ParseAdd("PythonSlimChecker/1.0");
+            // TODO: make sure there is an image built based on _docker_image_tag
 
-                    string apiUrl = "https://hub.docker.com/v2/repositories/python/tags/";
+            var instance = _instance.Value;     // no need for a lock when using these values, because it was already verified that Init was called, and Init should only be called once
 
-                    HttpResponseMessage response = await client.GetAsync(apiUrl);
-                    response.EnsureSuccessStatusCode();
+            //string escaped_name = filesystemtools
 
-                    string responseBody = await response.Content.ReadAsStringAsync();
+            string path = Path.Combine(instance._base_folder, name);
 
-                    // Parse JSON response
-                    var doc = JsonDocument.Parse(responseBody);
-                    JsonElement root = doc.RootElement;
-                    JsonArray tags = root.GetArray("results") ?? Array.Empty<JsonElement>();
 
-                    string latestTag = null;
-                    string latestVersion = null;
 
-                    foreach (JsonElement tag in tags)
-                    {
-                        string tagName = tag.GetProperty("name").GetString();
-                        if (!tagName.EndsWith("-slim")) continue;
-
-                        string version = tagName.Replace("-slim", "").Trim();
-
-                        if (string.IsNullOrEmpty(latestVersion) || CompareVersion(version, latestVersion) > 0)
-                        {
-                            latestVersion = version;
-                            latestTag = tagName;
-                        }
-                    }
-
-                    return latestTag ?? "3.12-slim"; // Fallback to common version
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error retrieving tag: {ex.Message}");
-                return "3.12-slim"; // Default fallback
-            }
         }
-
-        private static int CompareVersion(string v1, string v2)
-        {
-            var parts1 = v1.Split('.').Select(int.Parse).ToList();
-            var parts2 = v2.Split('.').Select(int.Parse).ToList();
-
-            // Remove trailing zeros
-            while (parts1.Count > 0 && parts1[^1] == 0) parts1.RemoveAt(parts1.Count - 1);
-            while (parts2.Count > 0 && parts2[^1] == 0) parts2.RemoveAt(parts2.Count - 1);
-
-            if (parts1.Count != parts2.Count)
-                return parts1.Count > parts2.Count ? 1 : -1;
-
-            for (int i = 0; i < parts1.Count; i++)
-            {
-                if (parts1[i] != parts2[i])
-                    return parts1[i].CompareTo(parts2[i]);
-            }
-            return 0;
-        }
-        */
 
         #endregion
     }

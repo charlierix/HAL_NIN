@@ -10,7 +10,7 @@ namespace MAFTesters_PythonSandboxMockService.Models_Endpoints
 
         public string ErrorMessage { get; init; }
 
-        public string SessionID { get; init; }
+        public string SessionKey { get; init; }
         public string SessionName { get; init; }
 
         public static SessionAddRemove_Response BuildError(string error_msg)
@@ -21,12 +21,12 @@ namespace MAFTesters_PythonSandboxMockService.Models_Endpoints
                 ErrorMessage = error_msg,
             };
         }
-        public static SessionAddRemove_Response BuildSuccess(string id, string name)
+        public static SessionAddRemove_Response BuildSuccess(string key, string name)
         {
             return new SessionAddRemove_Response
             {
                 IsSuccess = true,
-                SessionID = id,
+                SessionKey = key,
                 SessionName = name,
             };
         }
