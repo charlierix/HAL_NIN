@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MAFTesters_Core
+namespace MAFTesters_Agents
 {
     public record SessionArgs
     {

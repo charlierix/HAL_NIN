@@ -2,14 +2,14 @@
 using Microsoft.Extensions.AI;
 using System.Text;
 
-namespace MAFTesters_Core
+namespace MAFTesters_Agents
 {
     public static class WorkflowEventListener
     {
         // examples seem to like to use workflow.stream instead of run
         // but this function is written like a run, so call it run
 
-        // run comes from some overload of InProcessExecution.StreamAsync(workflow, ...)
+        // run comes from some overload of InProcessExecution.RunStreamingAsync(workflow, ...)
 
         // TODO: add a param that can accept events as they happen
         public async static Task<WorkflowEventListener_Response> ListenToStream(StreamingRun run)

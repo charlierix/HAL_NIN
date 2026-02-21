@@ -1,4 +1,5 @@
-﻿using Microsoft.Agents.AI;
+﻿using MAFTesters_Core;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
 
-namespace MAFTesters_Core
+namespace MAFTesters_Agents
 {
     /// <summary>
     /// When an agent call needs to return a type, this will give it json schema to return and will parse response as that type
@@ -214,7 +215,7 @@ namespace MAFTesters_Core
                 Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 

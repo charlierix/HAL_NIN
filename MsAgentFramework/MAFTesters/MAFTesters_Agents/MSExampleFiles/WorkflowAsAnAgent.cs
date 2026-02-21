@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MAFTesters_Core.MSExampleFiles
+namespace MAFTesters_Agents.MSExampleFiles
 {
     // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/Agents/WorkflowAsAnAgent
 

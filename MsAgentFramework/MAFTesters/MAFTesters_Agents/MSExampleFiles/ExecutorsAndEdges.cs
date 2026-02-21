@@ -1,7 +1,7 @@
 ﻿using Microsoft.Agents.AI.Workflows;
 using System.Text;
 
-namespace MAFTesters_Core.MSExampleFiles
+namespace MAFTesters_Agents.MSExampleFiles
 {
     // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/01_ExecutorsAndEdges
 
@@ -103,7 +103,7 @@ namespace MAFTesters_Core.MSExampleFiles
             var workflow = builder.Build();
 
             // Execute the workflow with input data
-            await using var run = await InProcessExecution.StreamAsync(workflow, text);
+            await using var run = await InProcessExecution.RunStreamingAsync(workflow, text);
 
             var retVal = await WorkflowEventListener.ListenToStream(run);
 

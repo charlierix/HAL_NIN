@@ -1,14 +1,13 @@
-﻿using MAFTesters_Core;
-using MAFTesters_Core.MSExampleFiles;
-using MAFTesters_Core.Tools;
+﻿using MAFTesters_Agents;
+using MAFTesters_Agents.MSExampleFiles;
+using MAFTesters_Agents.Tools;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
-using OllamaSharp;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using static MAFTesters_Core.MSExampleFiles.AgentWorkflowPatterns;
+using static MAFTesters_Agents.MSExampleFiles.AgentWorkflowPatterns;
 
 namespace MAFTesters_WPF
 {
@@ -65,7 +64,7 @@ namespace MAFTesters_WPF
                 // NOTE: it wan't calling the weather tool unless the prompt called for temperature
                 // NOTE: it asked for a location when one wasn't provided
                 //var streamingResponse = agent.RunStreamingAsync(txtPrompt.Text, thread);
-                await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, txtPrompt.Text));
+                await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, txtPrompt.Text));
 
                 var response = await WorkflowEventListener.ListenToStream(run);
 

@@ -5,7 +5,7 @@ using OllamaSharp;
 using System.Text;
 using System.Text.Json;
 
-namespace MAFTesters_Core.MSExampleFiles
+namespace MAFTesters_Agents.MSExampleFiles
 {
     // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/04_AgentWorkflowPatterns
 
@@ -100,7 +100,7 @@ namespace MAFTesters_Core.MSExampleFiles
             switch (workflow_type)
             {
                 case WorkflowType.sequential:
-                    await using (StreamingRun run1 = await InProcessExecution.StreamAsync(
+                    await using (StreamingRun run1 = await InProcessExecution.RunStreamingAsync(
                         AgentWorkflowBuilder.BuildSequential(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client))),
                         new List<ChatMessage>([new(ChatRole.User, text)])))
                     {
@@ -109,7 +109,7 @@ namespace MAFTesters_Core.MSExampleFiles
                     break;
 
                 case WorkflowType.concurrent:
-                    await using (StreamingRun run2 = await InProcessExecution.StreamAsync(
+                    await using (StreamingRun run2 = await InProcessExecution.RunStreamingAsync(
                         AgentWorkflowBuilder.BuildConcurrent(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client))),
                         new List<ChatMessage>([new(ChatRole.User, text)])))
                     {
@@ -144,7 +144,7 @@ namespace MAFTesters_Core.MSExampleFiles
                     {
                         messages.Add(new(ChatRole.User, text));
 
-                        await using StreamingRun run3 = await InProcessExecution.StreamAsync(workflow, messages);
+                        await using StreamingRun run3 = await InProcessExecution.RunStreamingAsync(workflow, messages);
                         var temp = await WorkflowEventListener.ListenToStream(run3);
 
                         messages.AddRange(temp.Messages_Final ?? []);
@@ -162,7 +162,7 @@ namespace MAFTesters_Core.MSExampleFiles
                     break;
 
                 case WorkflowType.groupchat:
-                    await using (StreamingRun run4 = await InProcessExecution.StreamAsync(
+                    await using (StreamingRun run4 = await InProcessExecution.RunStreamingAsync(
                         AgentWorkflowBuilder.CreateGroupChatBuilderWith(agents => new RoundRobinGroupChatManager(agents) { MaximumIterationCount = 5 })
                             .AddParticipants(new string[] { "French", "Spanish", "English" }.Select(o => GetTranslationAgent(o, client)))
                             .Build(),
@@ -183,7 +183,7 @@ namespace MAFTesters_Core.MSExampleFiles
         {
             string? lastExecutorId = null;
 
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, messages);
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, messages);
             await run.TrySendMessageAsync(new TurnToken(emitEvents: true));
 
             /* https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/core-concepts/events?pivots=programming-language-csharp

@@ -1,10 +1,11 @@
-﻿using Microsoft.Agents.AI;
+﻿using MAFTesters_Core;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using System.Text;
 
-namespace MAFTesters_Core.Tools
+namespace MAFTesters_Agents.Tools
 {
     // TODO: make an up front agent that looks at the requirements and decides if it's:
     //  - simple enough for a one shot
@@ -247,7 +248,7 @@ namespace MAFTesters_Core.Tools
                 Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
@@ -268,7 +269,7 @@ namespace MAFTesters_Core.Tools
                 Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, prompt));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
@@ -304,7 +305,7 @@ $@"filename: {script_name}
                 Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, prompt));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 
@@ -341,7 +342,7 @@ $@"filename: {script_name}
                 WithOutputFrom(agent).
                 Build();
 
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, prompt.ToString()));
 
             var response = await WorkflowEventListener.ListenToStream(run);
 

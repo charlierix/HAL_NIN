@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.AI;
 using OllamaSharp;
 
-namespace MAFTesters_Core
+namespace MAFTesters_Agents
 {
     public class ClientSettings
     {

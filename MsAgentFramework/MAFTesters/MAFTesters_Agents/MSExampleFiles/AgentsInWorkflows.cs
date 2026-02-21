@@ -4,7 +4,7 @@ using Microsoft.Extensions.AI;
 using OllamaSharp;
 using System.Text;
 
-namespace MAFTesters_Core.MSExampleFiles
+namespace MAFTesters_Agents.MSExampleFiles
 {
     // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/03_AgentsInWorkflows
 
@@ -49,7 +49,7 @@ namespace MAFTesters_Core.MSExampleFiles
                 .Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, text));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, text));
 
             // Must send the turn token to trigger the agents.
             // The agents are wrapped as executors. When they receive messages,
@@ -209,7 +209,7 @@ namespace MAFTesters_Core.MSExampleFiles
                 .Build();
 
             // Execute the workflow
-            await using StreamingRun run = await InProcessExecution.StreamAsync(workflow, new ChatMessage(ChatRole.User, text));
+            await using StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, new ChatMessage(ChatRole.User, text));
 
             return await WorkflowEventListener.ListenToStream(run);
         }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MAFTesters_Core.Tools
+namespace MAFTesters_Agents.Tools
 {
     public static class MermaidToImage
     {

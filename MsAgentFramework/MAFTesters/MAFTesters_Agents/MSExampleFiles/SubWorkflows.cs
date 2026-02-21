@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MAFTesters_Core.MSExampleFiles
+namespace MAFTesters_Agents.MSExampleFiles
 {
     // https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/Workflows/_Foundational/06_SubWorkflows
 
@@ -144,7 +144,7 @@ namespace MAFTesters_Core.MSExampleFiles
             console.AppendLine();
 
             //await using Run run = await InProcessExecution.RunAsync(mainWorkflow, text);
-            await using var run = await InProcessExecution.StreamAsync(mainWorkflow, text);
+            await using var run = await InProcessExecution.RunStreamingAsync(mainWorkflow, text);
 
             var retVal = await WorkflowEventListener.ListenToStream(run);
 
