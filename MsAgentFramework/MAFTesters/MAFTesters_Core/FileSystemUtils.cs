@@ -1,10 +1,20 @@
-﻿using System.Text;
+﻿using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace MAFTesters_Core
 {
     public static class FileSystemUtils
     {
+        public static bool IsWindows() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+        public static string EscapeFilename(string filename, bool containsFolder = false)
+        {
+            return IsWindows() ?
+                EscapeFilename_Windows(filename, containsFolder) :
+                EscapeFilename_Linux(filename, containsFolder);
+        }
         /// <summary>
         /// This will replace invalid chars with underscores, there are also some reserved words that it adds underscore to
         /// </summary>

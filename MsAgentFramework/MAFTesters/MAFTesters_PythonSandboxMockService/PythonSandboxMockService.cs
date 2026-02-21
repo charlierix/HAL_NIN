@@ -1,4 +1,5 @@
-﻿using MAFTesters_PythonSandboxMockService.Models_Endpoints;
+﻿using MAFTesters_Core;
+using MAFTesters_PythonSandboxMockService.Models_Endpoints;
 
 namespace MAFTesters_PythonSandboxMockService
 {
@@ -40,8 +41,10 @@ namespace MAFTesters_PythonSandboxMockService
                 if (instance._base_folder != null && instance._base_folder != base_folder)
                     throw new ArgumentException($"Init has already been called with a different base folder.  existing: '{instance._base_folder}', new arg: {base_folder}");
 
-                instance._base_folder = base_folder;
-                instance._dbPath = Path.Combine(base_folder, "settings.db");
+                string escaped_folder = FileSystemUtils.EscapeFilename(base_folder);
+
+                instance._base_folder = escaped_folder;
+                instance._dbPath = Path.Combine(escaped_folder, "settings.db");
                 instance._docker_image_tag = docker_image_tag;      // don't do anything with this until they make a new session (no point building images that never get used if there are multiple version changes between sessions)
             }
         }
@@ -195,16 +198,42 @@ namespace MAFTesters_PythonSandboxMockService
 
             var instance = _instance.Value;     // no need for a lock when using these values, because it was already verified that Init was called, and Init should only be called once
 
-            //string escaped_name = filesystemtools
+            string escaped_name = FileSystemUtils.EscapeFilename(name);
 
-            string path = Path.Combine(instance._base_folder, name);
+            string path = Path.Combine(instance._base_folder, escaped_name);
 
+            if (Directory.Exists(path))
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"folder already exists with that name.  name: '{name}', escaped name: '{escaped_name}'"));
 
+            // Create the folder first
+            try
+            {
+                Directory.CreateDirectory(path);
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"couldn't create the folder.  path: {path}"));
+            }
 
+            // Add to DB
+            string key = null;
+            try
+            {
+                key = await DAL.AddSession(instance._dbPath, name, path);
+            }
+            catch (Exception ex)
+            {
+                // Try to delete the folder, it's not the end of the world if it fails
+                try { Directory.Delete(path, true); } catch (Exception) { }
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"couldn't add session to the db: {ex.Message}"));
+            }
 
-
-
-            throw new ApplicationException("finish this");
+            return await Task.FromResult(new SessionAddRemove_Response
+            {
+                IsSuccess = true,
+                SessionKey = key,
+                SessionName = name
+            });
         }
 
         #endregion

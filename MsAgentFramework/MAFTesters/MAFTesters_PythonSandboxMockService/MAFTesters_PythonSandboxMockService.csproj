@@ -10,4 +10,8 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MAFTesters_Core\MAFTesters_Core.csproj" />
+  </ItemGroup>
+
 </Project>
