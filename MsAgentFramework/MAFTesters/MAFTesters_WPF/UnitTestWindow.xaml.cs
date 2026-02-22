@@ -360,7 +360,7 @@ def get_log_folder():
                 MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private async void Docker_AddRemoveSession_Click(object sender, RoutedEventArgs e)
+        private async void Docker_FindSession_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -368,11 +368,57 @@ def get_log_folder():
 
                 await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
 
-                string session_name = "unit test add/remove session";
+                var response = await PythonSandboxMockService.FindSession(txtSessionName.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void Docker_AddSession_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var args = GetDockerSessionArgs();
 
-                var add_response = await PythonSandboxMockService.NewSession(session_name);
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
 
-                var remove_response = await PythonSandboxMockService.RemoveSession(session_name);
+                var add_response = await PythonSandboxMockService.NewSession(txtSessionName.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void Docker_GetOrCreateSession_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var args = GetDockerSessionArgs();
+
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
+
+                var response = await PythonSandboxMockService.GetOrCreateSession(txtSessionName.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void Docker_RemoveSession_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var args = GetDockerSessionArgs();
+
+                await PythonSandboxMockService.Init(args.Folder, args.DockerImageTag);
+
+                var found_session = await PythonSandboxMockService.FindSession(txtSessionName.Text);
+
+                if (found_session.IsSuccess && found_session.Session != null)
+                {
+                    var remove_response = await PythonSandboxMockService.RemoveSession(found_session.Session.Key);
+                }
             }
             catch (Exception ex)
             {

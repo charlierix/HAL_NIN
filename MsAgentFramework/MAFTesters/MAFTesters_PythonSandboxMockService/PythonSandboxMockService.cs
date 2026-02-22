@@ -1,5 +1,6 @@
 ﻿using MAFTesters_Core;
 using MAFTesters_PythonSandboxMockService.Models_Endpoints;
+using System.Xml.Linq;
 
 namespace MAFTesters_PythonSandboxMockService
 {
@@ -14,6 +15,8 @@ namespace MAFTesters_PythonSandboxMockService
     public class PythonSandboxMockService
     {
         #region Declaration Section
+
+        private const string CALL_INIT_MSG = "need to call Init() first";
 
         private readonly object _lock = new object();
 
@@ -34,6 +37,12 @@ namespace MAFTesters_PythonSandboxMockService
             //      python sandbox folder
             //      any folders that were added for the scripts to work on
 
+            if (string.IsNullOrWhiteSpace(base_folder))
+                throw new ArgumentNullException(nameof(base_folder));
+
+            if (string.IsNullOrWhiteSpace(docker_image_tag))
+                throw new ArgumentNullException(nameof(docker_image_tag));
+
             var instance = _instance.Value;
 
             lock (instance._lock)
@@ -41,7 +50,7 @@ namespace MAFTesters_PythonSandboxMockService
                 if (instance._base_folder != null && instance._base_folder != base_folder)
                     throw new ArgumentException($"Init has already been called with a different base folder.  existing: '{instance._base_folder}', new arg: {base_folder}");
 
-                string escaped_folder = FileSystemUtils.EscapeFilename(base_folder);
+                string escaped_folder = FileSystemUtils.EscapeFilename(base_folder, true);
 
                 instance._base_folder = escaped_folder;
                 instance._dbPath = Path.Combine(escaped_folder, "settings.db");
@@ -49,23 +58,16 @@ namespace MAFTesters_PythonSandboxMockService
             }
         }
 
+        // TODO: GetSessionDetails(key)
+
         public static async Task<SessionList_Response> GetSessionList()
         {
             try
             {
-                string db_path = null;
-                var instance = _instance.Value;
-                lock (instance._lock)
-                    db_path = instance._dbPath;
+                if (!EnsureInitWasCalled())
+                    return await Task.FromResult(SessionList_Response.BuildError(CALL_INIT_MSG));
 
-                if (db_path == null)
-                    return await Task.FromResult(new SessionList_Response
-                    {
-                        IsSuccess = false,
-                        ErrorMessage = "Need to call Init() first",
-                    });
-
-                var sessions_db = await DAL.GetSessions(db_path);
+                var sessions_db = await DAL.GetSessions(_instance.Value._dbPath);
 
 
                 // TODO: also get folders/python scripts from each session's working folder
@@ -82,19 +84,37 @@ namespace MAFTesters_PythonSandboxMockService
                     }).
                     ToArray();
 
-                return await Task.FromResult(new SessionList_Response
-                {
-                    IsSuccess = true,
-                    Sessions = sessions_respone,
-                });
+                return await Task.FromResult(SessionList_Response.BuildSuccess(sessions_respone));
             }
             catch (Exception ex)
             {
-                return await Task.FromResult(new SessionList_Response
-                {
-                    IsSuccess = false,
-                    ErrorMessage = $"Caught exception in GetSessionList: {ex}",
-                });
+                return await Task.FromResult(SessionList_Response.BuildError($"Caught exception in GetSessionList: {ex}"));
+            }
+        }
+        public static async Task<FindSession_Response> FindSession(string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    return await Task.FromResult(FindSession_Response.BuildError("name passed in is blank"));
+
+                // Get session list
+                var existing = await GetSessionList();
+                if (!existing.IsSuccess)
+                    return await Task.FromResult(FindSession_Response.BuildError(existing.ErrorMessage));
+
+                // Find name, trim, case insensitive
+                var match = FindSession(name, existing.Sessions);
+
+                if (match != null)
+                    return await Task.FromResult(FindSession_Response.BuildSuccess(match));
+
+                // It doesn't exist, create a new one
+                return await Task.FromResult(FindSession_Response.BuildSuccess(null));      // not found is an expected possible outcome, so isn't an error
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(FindSession_Response.BuildError($"Caught exception in GetOrCreateSession: {ex}"));
             }
         }
 
@@ -146,12 +166,35 @@ namespace MAFTesters_PythonSandboxMockService
             }
             catch (Exception ex)
             {
-                return await Task.FromResult(SessionAddRemove_Response.BuildError($"Caught exception in GetOrCreateSession: {ex}"));
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"Caught exception in NewSession: {ex}"));
             }
         }
         public static async Task<SessionAddRemove_Response> RemoveSession(string session_key)
         {
-            return await Task.FromResult(SessionAddRemove_Response.BuildError("finish this"));
+            try
+            {
+                if (string.IsNullOrWhiteSpace(session_key))
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError("session_key passed in is blank"));
+
+                if (!EnsureInitWasCalled())
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError(CALL_INIT_MSG));
+
+                //var session = await DAL.GetSession(_instance.Value._dbPath, session_key);
+                var session = await DAL.RemoveSession(_instance.Value._dbPath, session_key);
+
+                if (session == null)
+                    return await Task.FromResult(SessionAddRemove_Response.BuildError($"session doesn't exist: {session_key}"));
+
+                // Try to delete the folder
+                // TODO: if there is an issue, log a warning
+                try { Directory.Delete(session.FolderName, true); } catch (Exception) { }
+
+                return await Task.FromResult(SessionAddRemove_Response.BuildSuccess(session_key, session.Name));
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"Caught exception in RemoveSession: {ex}"));
+            }
         }
 
         public static async Task<SessionFolder_Response> AddFolder(string session_key, string path)
@@ -181,6 +224,16 @@ namespace MAFTesters_PythonSandboxMockService
         }
 
         #region Private Methods
+
+        private static bool EnsureInitWasCalled()
+        {
+            string db_path = null;
+            var instance = _instance.Value;
+            lock (instance._lock)
+                db_path = instance._dbPath;
+
+            return db_path != null;
+        }
 
         private static SessionEntry? FindSession(string name, SessionEntry[] sessions)
         {
@@ -224,16 +277,13 @@ namespace MAFTesters_PythonSandboxMockService
             catch (Exception ex)
             {
                 // Try to delete the folder, it's not the end of the world if it fails
+                // TODO: if there is an issue, log a warning
                 try { Directory.Delete(path, true); } catch (Exception) { }
+
                 return await Task.FromResult(SessionAddRemove_Response.BuildError($"couldn't add session to the db: {ex.Message}"));
             }
 
-            return await Task.FromResult(new SessionAddRemove_Response
-            {
-                IsSuccess = true,
-                SessionKey = key,
-                SessionName = name
-            });
+            return await Task.FromResult(SessionAddRemove_Response.BuildSuccess(key, name));
         }
 
         #endregion

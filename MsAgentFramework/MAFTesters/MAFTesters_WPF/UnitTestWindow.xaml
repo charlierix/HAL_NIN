@@ -23,7 +23,7 @@
 
         <StackPanel Grid.Column="2">
             <Label Content="DOCKER"/>
-            <Expander Header="settings" IsExpanded="True">
+            <Expander Header="settings" IsExpanded="False">
                 <StackPanel Margin="0,0,0,24">
                     <Label Content="folder"/>
                     <TextBox x:Name="txtFolder" Text="D:\temp\agent tests\docker"/>
@@ -47,8 +47,14 @@
                 </StackPanel>
             </Expander>
 
+            <Label Content="session name"/>
+            <TextBox x:Name="txtSessionName" Text="aaa" Margin="0,0,0,8"/>
+
             <Button Content="get session list" Click="Docker_GetSessions_Click"/>
-            <Button Content="add/remove session" Click="Docker_AddRemoveSession_Click"/>
+            <Button Content="find session" Click="Docker_FindSession_Click"/>
+            <Button Content="add session" Click="Docker_AddSession_Click"/>
+            <Button Content="get or create session" Click="Docker_GetOrCreateSession_Click"/>
+            <Button Content="remove session" Click="Docker_RemoveSession_Click"/>
         </StackPanel>
     </Grid>
 </Window>
