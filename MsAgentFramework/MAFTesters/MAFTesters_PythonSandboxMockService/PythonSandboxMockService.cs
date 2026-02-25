@@ -1,6 +1,6 @@
 ﻿using MAFTesters_Core;
 using MAFTesters_PythonSandboxMockService.Models_Endpoints;
-using System.Xml.Linq;
+using System.Diagnostics;
 
 namespace MAFTesters_PythonSandboxMockService
 {
@@ -22,7 +22,8 @@ namespace MAFTesters_PythonSandboxMockService
 
         private string _base_folder;
         private string _dbPath;
-        private string _docker_image_tag;
+        private string _docker_image_tag;       // "python:3.12-slim"
+        private string _docker_image_filename;      // "Dockerfile_" + _docker_image_tag with special chars (:.) converted to underscores (this is what the file would be called, later code may check and actually create this if it doesn't exist)
 
         private static Lazy<PythonSandboxMockService> _instance = new Lazy<PythonSandboxMockService>();
 
@@ -55,6 +56,7 @@ namespace MAFTesters_PythonSandboxMockService
                 instance._base_folder = escaped_folder;
                 instance._dbPath = Path.Combine(escaped_folder, "settings.db");
                 instance._docker_image_tag = docker_image_tag;      // don't do anything with this until they make a new session (no point building images that never get used if there are multiple version changes between sessions)
+                instance._docker_image_filename = GetDockerFilename(docker_image_tag);
             }
         }
 
@@ -225,26 +227,6 @@ namespace MAFTesters_PythonSandboxMockService
 
         #region Private Methods
 
-        private static bool EnsureInitWasCalled()
-        {
-            string db_path = null;
-            var instance = _instance.Value;
-            lock (instance._lock)
-                db_path = instance._dbPath;
-
-            return db_path != null;
-        }
-
-        private static SessionEntry? FindSession(string name, SessionEntry[] sessions)
-        {
-            if (sessions == null || sessions.Length == 0)
-                return null;
-
-            string name_trimmed = name.Trim();
-
-            return sessions.FirstOrDefault(o => o.Name.Trim().Equals(name_trimmed, StringComparison.OrdinalIgnoreCase));
-        }
-
         private static async Task<SessionAddRemove_Response> NewSession_Create(string name)
         {
             // TODO: make sure there is an image built based on _docker_image_tag
@@ -257,6 +239,16 @@ namespace MAFTesters_PythonSandboxMockService
 
             if (Directory.Exists(path))
                 return await Task.FromResult(SessionAddRemove_Response.BuildError($"folder already exists with that name.  name: '{name}', escaped name: '{escaped_name}'"));
+
+            // Make sure there is a docker image for the tag
+            try
+            {
+                await EnsureDockerExists();
+            }
+            catch (Exception ex)
+            {
+                return await Task.FromResult(SessionAddRemove_Response.BuildError($"couldn't create docker image: {ex}"));
+            }
 
             // Create the folder first
             try
@@ -284,6 +276,102 @@ namespace MAFTesters_PythonSandboxMockService
             }
 
             return await Task.FromResult(SessionAddRemove_Response.BuildSuccess(key, name));
+        }
+
+        private static bool EnsureInitWasCalled()
+        {
+            string db_path = null;
+            var instance = _instance.Value;
+            lock (instance._lock)
+                db_path = instance._dbPath;
+
+            return db_path != null;
+        }
+
+        private static async Task EnsureDockerExists()
+        {
+            // NOTE: the calling function wraps this in a try/catch, so no need to do that here
+
+            var instance = _instance.Value;
+
+            if (!Directory.Exists(instance._base_folder))
+                Directory.CreateDirectory(instance._base_folder);
+
+            // Look for the dockerfile
+            string path = Path.Combine(instance._base_folder, instance._docker_image_filename);
+            if (File.Exists(path))
+                return;
+
+            // It's not there, create it
+            string docker_contents =
+$@"# Debian (Linux) with Python pre-installed
+FROM {instance._docker_image_tag}
+
+# install apt-utils (`useradd`, `userdel`, `usermod`, etc)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends apt-utils
+
+# create python user, also containers folder (mount point for admin account)
+# -M suppresses home directory creation (/home/python_user)
+# admin's mount point, session subfolders will go under here
+# Restricted permissions for python_user (python_user will only be allowed on the subfolders)
+
+RUN useradd -s /bin/false -M python_user && \
+    mkdir -p /containers && \
+    chown root:root /containers && \
+    chmod 750 /containers";
+
+            File.WriteAllText(path, docker_contents);
+
+            // Build it
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"build -t {instance._docker_image_filename} -f \"{path}\" .",
+                UseShellExecute = false,        // critical for hiding the window
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using Process process = new Process { StartInfo = startInfo };
+
+            process.Start();
+
+            // Read output and error streams asynchronously
+            string output = await process.StandardOutput.ReadToEndAsync();
+            string error = await process.StandardError.ReadToEndAsync();
+
+            // Check exit code and errors
+            //if (process.ExitCode != 0 || !string.IsNullOrEmpty(error))        // it's always outputing to error
+            if (process.ExitCode != 0)
+                throw new Exception($"Docker build failed: {output}{Environment.NewLine}{error}");
+
+            // may want to log the output
+            // Debug.WriteLine(output);
+        }
+
+        private static string GetDockerFilename(string tag)
+        {
+            string cleaned = tag.
+                Replace('.', '_').      // . is normally valid, but in this case, make it an underscore
+                Replace(':', '_');
+
+            cleaned = FileSystemUtils.EscapeFilename(cleaned);
+
+            cleaned = cleaned.ToLower();        // docker requires tag to be lower case
+
+            return $"dockerfile_{cleaned}";
+        }
+
+        private static SessionEntry? FindSession(string name, SessionEntry[] sessions)
+        {
+            if (sessions == null || sessions.Length == 0)
+                return null;
+
+            string name_trimmed = name.Trim();
+
+            return sessions.FirstOrDefault(o => o.Name.Trim().Equals(name_trimmed, StringComparison.OrdinalIgnoreCase));
         }
 
         #endregion

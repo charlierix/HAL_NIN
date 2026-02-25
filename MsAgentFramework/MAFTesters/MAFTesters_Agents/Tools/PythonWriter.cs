@@ -170,16 +170,18 @@ namespace MAFTesters_Agents.Tools
 
 
 
+            // TODO: don't put everything in a single markdown, break into:
+            //  - documentation
+            //  - requirements used to generate
+            //  - example uses
+            //  - suggested unit tests
+
             // Generate a markdown that documents the script
             var agent_documenter = CreateAgent_Documentation(client);
 
             string documentation = await DocumentScript(requirements, script_prompt, script_contents, agent_documenter);
             if (documentation != null)
                 File.WriteAllText(filename_md.full_path, documentation);
-
-
-
-            // Generate a file full of suggested unit tests
 
 
 
