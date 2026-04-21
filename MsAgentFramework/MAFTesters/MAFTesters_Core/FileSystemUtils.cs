@@ -152,7 +152,9 @@ namespace MAFTesters_Core
             foreach (char c in filename)
             {
                 // Replace control characters (ASCII 0-31 and 127) and path separators
-                if (c <= 0x1F || c == 0x7F || c == '/')
+                if (c <= 0x1F || c == 0x7F)
+                    builder.Append('_');
+                else if (!containsFolder && c == '/')
                     builder.Append('_');
                 else
                     builder.Append(c);
