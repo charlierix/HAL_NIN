@@ -9,6 +9,9 @@ namespace MAFTesters_Core
     {
         public const string VIRTUAL_ENV = ".venv";
 
+        public static string GetPythonExe(string baseFolder) =>
+            Path.Combine(baseFolder, VIRTUAL_ENV, FileSystemUtils.IsWindows() ? "Scripts" : "bin", "python");
+
         /// <summary>
         /// Creates the folder if necessary, makes sure virtual environment is created, does core pip installs
         /// </summary>
@@ -21,27 +24,26 @@ namespace MAFTesters_Core
                 return;
 
             // Create the virtual environment
-            //Process.Start("python", $"-m venv {VIRTUAL_ENV}");        // need to wait for it to finish
-            Process process = new Process
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "python",
-                    Arguments = $"-m venv {VIRTUAL_ENV}",
+                FileName = "python",
+                Arguments = $"-m venv {VIRTUAL_ENV}",
 
-                    UseShellExecute = false,
-                    WorkingDirectory = folder,
+                UseShellExecute = false,
+                WorkingDirectory = folder,
 
-                    WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
 
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = true,
-                }
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
             };
-            process.Start();
-            process.WaitForExit();
 
-            ThrowIfError(process, "Error setting up virtual environment");
+            using (Process process = Process.Start(startInfo))
+            {
+                process?.WaitForExit();
+                ThrowIfError(process, "Error setting up virtual environment");
+            }
 
             // pip install --upgrade pyflakes
             PipInstall(folder, "pyflakes", true);
@@ -60,28 +62,28 @@ namespace MAFTesters_Core
         {
             string pyflakesExePath = Path.Combine(python_folder, VIRTUAL_ENV, "Scripts", "pyflakes.exe");
 
-            Process process = new Process
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = pyflakesExePath,
-                    Arguments = $"\"{script_name}\"",
+                FileName = pyflakesExePath,
+                Arguments = $"\"{script_name}\"",
 
-                    UseShellExecute = false,
-                    WorkingDirectory = python_folder,
+                UseShellExecute = false,
+                WorkingDirectory = python_folder,
 
-                    WindowStyle = ProcessWindowStyle.Hidden,
+                WindowStyle = ProcessWindowStyle.Hidden,
 
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                }
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
             };
-            process.Start();
-            process.WaitForExit();
 
-            ThrowIfError(process, "Error running pyflakes");
+            string? errors = null;
+            using (Process? process = Process.Start(startInfo))
+            {
+                process?.WaitForExit();
+                ThrowIfError(process, "Error running pyflakes");
 
-            string errors = process.StandardOutput.ReadToEnd();     // pyflakes doesn't print anything if the file is valid
+                errors = process?.StandardOutput.ReadToEnd();     // pyflakes doesn't print anything if the file is valid
+            }
 
             return string.IsNullOrWhiteSpace(errors) ? null : errors;
         }
@@ -89,7 +91,7 @@ namespace MAFTesters_Core
         // This will do a pip install, virtual environment must be set before this
         private static void PipInstall(string folder, string packageName, bool isUpgrade)
         {
-            string pythonExePath = Path.Combine(folder, VIRTUAL_ENV, "Scripts", "python.exe");
+            string pythonExePath = GetPythonExe(folder);
 
             string args = "-m pip install";
 
@@ -98,30 +100,40 @@ namespace MAFTesters_Core
 
             args += $" {packageName}";
 
-            Process process = new Process
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = pythonExePath,
-                    Arguments = args,
+                FileName = pythonExePath,
+                Arguments = args,
 
-                    UseShellExecute = false,
-                    WorkingDirectory = folder,
+                UseShellExecute = false,
+                WorkingDirectory = folder,
 
-                    WindowStyle = ProcessWindowStyle.Hidden,
+                WindowStyle = ProcessWindowStyle.Hidden,
 
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = true,
-                }
+                RedirectStandardOutput = false,
+                RedirectStandardError = true,
             };
-            process.Start();
-            process.WaitForExit();
 
-            ThrowIfError(process, "Error running pip install");
+            using (Process? process = Process.Start(startInfo))
+            {
+                process?.WaitForExit();
+                ThrowIfError(process, "Error running pip install");
+            }
         }
 
-        private static void ThrowIfError(Process process, string message)
+        private static void ThrowIfError(Process? process, string message)
         {
+            if (process == null)
+                throw new ApplicationException($"{message}: process is null (exe probably doesn't exist or not in path)");
+
+            if (process.ExitCode != 0)
+            {
+                string error = process.StartInfo.RedirectStandardError ?
+                    process.StandardError.ReadToEnd() :
+                    "UNKNOWN ERROR, StandardError wasn't redirected";
+                throw new InvalidOperationException($"{message}: {error}");
+            }
+
             if (!process.StartInfo.RedirectStandardError)
                 return;
 
