@@ -1,0 +1,1 @@
+please populate `okf knowledge bundles\<sub fol11der>` from `<source folder>` according to this playbook: `okf knowledge bundles\.agent\build playbook.md`
